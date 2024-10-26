@@ -10,6 +10,7 @@ static unsigned char buf[MAX_PAYLOAD_SIZE + 1] = {0};
 static unsigned int byteSize = 0;
 static unsigned char repeated = 0;
 static unsigned char escapeFound = 0;
+static unsigned int frameNumToSend = 0;
 
 
 
@@ -43,11 +44,10 @@ enum machineStates handleByte(unsigned char byte)
         else
             state = START;
 
-
         controlByte = byte;
         break;
     case C_RCV:
-        if (byte == addressByte ^ controlByte)
+        if (byte == addressByte ^ controlByte) 
             state = BCC_OK;
         else if (byte == FLAG)
             state = FLAG_RCV;
@@ -55,17 +55,32 @@ enum machineStates handleByte(unsigned char byte)
             state = START;
         break;
     case BCC_OK:
-        if (byte == FLAG) state = END;
-        else if (controlByte == SET || addressByte == AR) state = START;
-        else if (isInfoControl(controlByte))
+        if (byte == FLAG)
         {
-            // TODO: Do UNmasking
-            buf[byteSize] = byte;
-            byteSize++;
+            // if it is sender getting OK response
+            if (isReadyToReceiveByte(controlByte)) frameNumToSend = receiveToSendControlByte(controlByte);
+            state = END;    
+        } 
+        // If is receiver receving information
+        else if (isInfoControl(controlByte) && addressByte == AS)
+        {
+            if (byte == ESC) escapeFound = 1;
+            else
+            {
+                if (escapeFound)
+                {
+                    if (byte == ESCAPED_FLAG) byte = FLAG;
+                    else if (byte == ESCAPED_ESC) byte = ESC;
+                    escapeFound = 0;
+                }
+                buf[byteSize] = byte;
+                byteSize++;
+            }
         }
+        else state = START; 
         break;
     case END:
-
+        
     break;
     default:
         break;
@@ -83,6 +98,9 @@ unsigned char* getMachineData() {return buf;}
 
 unsigned int getMachineDataSize() {return byteSize; }
 
+unsigned int getFrameNum() {return frameNumToSend; }
+
+
 
 void cleanMachineData()
 {
@@ -92,5 +110,4 @@ void cleanMachineData()
     repeated = 0;
     escapeFound = 0;
     addressByte = 0;
-    controlByte = 0;
 }

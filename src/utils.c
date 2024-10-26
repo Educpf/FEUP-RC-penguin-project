@@ -16,8 +16,9 @@ int fullWrite(unsigned char *data, int nBytes)
     return 0;
 }
 
-
-int processInformationFrame(unsigned char* packet)
+// -1 -> error
+// n -> bytes written to packet
+int processInformationFrame(unsigned char *packet)
 {
     // REPEATED
     if (!isInfoRepeated())
@@ -29,27 +30,57 @@ int processInformationFrame(unsigned char* packet)
             calculatedBcc ^= getMachineData()[i];
         if (calculatedBcc != Bcc)
         {
-            // TODO: WRITE ERROR FRAME
             printf("ERROR! Not valid format\n");
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
-            unsigned char response[5] = {FLAG, AR, C, AR ^ C, FLAG};
-            int bytes = fullWrite(response, 5);
+            unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
+            if (fullWrite(response, 5) == -1)
+                return -1;
         }
         else
         {
             // OK
-            memcpy(finalBuffer + writePosition, getMachineData(), getMachineDataSize() - 1);
-            writePosition += getMachineDataSize() - 1; // Exclude Bcc byte
+            memcpy(packet, getMachineData(), getMachineDataSize() - 1);
+
+            printf("Asking for next data frame\n");
+            unsigned char C = RR0 + (getControlByte() == C_INFO_0);
+            unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
+            if (fullWrite(response, 5) == -1)
+                return -1;
+
+            return getMachineDataSize() - 1;
         }
     }
+    else
+    {
+        printf("Asking for next data frame\n");
+        unsigned char C = RR0 + (getControlByte() == C_INFO_0);
+        unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
+        if (fullWrite(response, 5) == -1)
+            return -1;
+    }
+    return 0;
+}
 
-    // Clean up machine
-    cleanMachineData();
 
-    // TODO: WRITE OK INFO FRAME
 
-    printf("Asking for next data frame\n");
-    unsigned char C = RR0 + (getControlByte() == C_INFO_0);
-    unsigned char response[5] = {FLAG, AR, C, AR ^ C, FLAG};
-    int bytes = fullWrite(response, 5);
+// 0 -> not stuffed
+// 1 -> stuffed
+int addByteWithStuff(unsigned char byte, unsigned char *buf)
+{
+    if (byte == FLAG)
+    {
+        *buf++ = ESC;
+        *buf = ESCAPED_FLAG;
+        return 1;
+    }
+    // If its ESC change to ESC ESCAPED_ESC
+    if (byte == ESC)
+    {
+        *buf++ = ESC;
+        *buf = ESCAPED_ESC;
+        return 1;
+    }
+   
+    *buf = byte;
+    return 0;
 }

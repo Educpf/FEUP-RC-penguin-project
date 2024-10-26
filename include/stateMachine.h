@@ -39,4 +39,6 @@ unsigned char* getMachineData();
 
 unsigned int getMachineDataSize();
 
+unsigned int getFrameNum();
+
 void cleanMachineData();

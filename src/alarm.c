@@ -30,7 +30,11 @@ void alarmHandler(int signal)
 // 2 -> already enabled
 int setupAlarm(int maximumRetransmitions, int timeout)
 {
-    if (alarmCount > maximumRetransmitions) return 1;
+    if (alarmCount > maximumRetransmitions)
+    {
+        printf("MAXIMUM RETRANSMITION REACHED\n");
+        return 1;
+    }
     if (alarmEnabled == TRUE) return 2;
 
     printf("Alarm set\n");

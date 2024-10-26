@@ -19,6 +19,7 @@
 #define REJ0 0x54
 #define REJ1 0x55
 
+#define DISC 0x0B
 
 #define isFlag(x) 
 #define isInfoControl(x) (x == C_INFO_0 || x == C_INFO_1)

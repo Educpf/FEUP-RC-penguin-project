@@ -141,15 +141,18 @@ int llwrite(const unsigned char *buf, int bufSize)
         unsigned char transferByte = buf[i];
 
         bcc ^= transferByte;
-        byteNum += addByteWithStuff(transferByte, dataFrame[byteNum]) + 1;
+        byteNum += addByteWithStuff(transferByte, dataFrame + byteNum) + 1;
         // If its FLag change to ESC ESCAPED_FLAG
     }
 
     // BCC == FLAG || BCC == ESC
-    byteNum += addByteWithStuff(bcc, dataFrame[byteNum]) + 1;
+    byteNum += addByteWithStuff(bcc, dataFrame + byteNum) + 1;
     dataFrame[byteNum++] = FLAG;
 
-
+    for (int i = 0; i<byteNum; i++)
+    {
+        printf("%x - ", dataFrame[i]);
+    }
 
 
     int STOP = FALSE;
@@ -181,7 +184,10 @@ int llwrite(const unsigned char *buf, int bufSize)
 
             if (handleByte(byte) == END)
             {
-                turnOffAlarm();
+                if (isRejectionByte(getControlByte()) == 0)
+                {
+                     turnOffAlarm();
+                }
 
                 // GOOD INFORMATION RESPONSE
                 if (isReadyToReceiveByte(getControlByte())) STOP = TRUE;
@@ -212,7 +218,8 @@ int llread(unsigned char *packet)
             // INFORMATION FRAME
             if (isInfoControl(getControlByte()))
             {
-                return processInformationFrame(packet);
+                int bytesRead = processInformationFrame(packet);
+                if (bytesRead != 0) return bytesRead;
             }
 
             if (getControlByte() == DISC)

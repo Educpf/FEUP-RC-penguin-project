@@ -27,22 +27,25 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Unable to connect\n");
     }
     
+    unsigned char packet[MAX_PAYLOAD_SIZE];
     switch (actualRole)
     {
 
         case LlRx:
             
-            unsigned char packet[MAX_PAYLOAD_SIZE];
 
             int STOP = FALSE;
             while (STOP == FALSE)
             {
                 int nbytes = llread(packet);
                 if (nbytes == -1) printf("Error when reading\n");
-                if (nbytes == 0) printf("Not supposed to be reading, no information received\n");
+                if (nbytes == 0)
+                {
+                    printf("Not supposed to be reading, no information received\n");
+                    return;
+                }
                 if (nbytes != 0)
                 {
-                    
                     // DECOMPOSE AND SEE CONTROL BYTE
                     unsigned char controlField = packet[0];
 
@@ -102,7 +105,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             fseek(file, 0, SEEK_SET);
 
             // Write start
-            unsigned char packet[MAX_PAYLOAD_SIZE];
             packet[0] = 1;
             // file size
             packet[1] = 0;
@@ -113,13 +115,15 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             packet[8] = (unsigned char)strlen(filename);
             memcpy(packet + 9, filename, packet[8]);
 
-            llwrite(packet, packet[8] + packet[2] + 5);
+            printf("Sending packet of %d bytes\n", packet[8] + packet[2] + 5);
+            if (llwrite(packet, packet[8] + packet[2] + 5) == -1){ printf("Error writting") ; return;}
 
             // Write Data
             packet[0] = 2;
             int bytesRead = 0;
             while ((bytesRead = fread(packet + 4, 1, MAX_PAYLOAD_SIZE-4, file)) > 0)
             {  
+                printf("Sending packet of %d bytes\n", bytesRead);
                 packet[1] = sequenceNumber++;
                 packet[2] = bytesRead / 256;
                 packet[3] = bytesRead % 256; 

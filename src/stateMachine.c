@@ -47,7 +47,7 @@ enum machineStates handleByte(unsigned char byte)
         controlByte = byte;
         break;
     case C_RCV:
-        if (byte == addressByte ^ controlByte) 
+        if (byte == (addressByte ^ controlByte)) 
             state = BCC_OK;
         else if (byte == FLAG)
             state = FLAG_RCV;

@@ -2,6 +2,9 @@
 #include "serial_port.h"
 #include "stateMachine.h"
 
+#include <stdio.h>
+#include <string.h>
+
 int fullWrite(unsigned char *data, int nBytes)
 {
     int nBytesWritten = 0;
@@ -21,16 +24,17 @@ int fullWrite(unsigned char *data, int nBytes)
 int processInformationFrame(unsigned char *packet)
 {
     // REPEATED
-    if (!isInfoRepeated())
+    if (isInfoRepeated() == 0)
     {
         // ERROR
         unsigned char Bcc = getMachineData()[getMachineDataSize() - 1];
         unsigned char calculatedBcc = 0;
         for (unsigned int i = 0; i < getMachineDataSize(); i++)
             calculatedBcc ^= getMachineData()[i];
+
         if (calculatedBcc != Bcc)
         {
-            printf("ERROR! Not valid format\n");
+            printf("ERROR in BCC2\n");
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
             if (fullWrite(response, 5) == -1)

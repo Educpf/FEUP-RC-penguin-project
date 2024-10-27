@@ -5,10 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MAX_SEQUENCE_NUMBER 99
+
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
-    printf("Hi world!\n");
     // Open Connection
     LinkLayerRole actualRole = role[0] == 'r' ? LlRx : LlTx;
     LinkLayer linkLayer;
@@ -18,12 +19,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     linkLayer.nRetransmissions = nTries;
     linkLayer.timeout = timeout;
     int sequenceNumber = 0;
-    //    = { var, actualRole, baudRate, nTries, timeout};
-    // linkLayer.serialPort = var;
 
     if (llopen(linkLayer) == -1)
     {
-        printf("Unable to connect\n");
+        printf("Unable to connect (Application Layer)\n");
         return;
     }
 
@@ -32,34 +31,44 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     {
 
     case LlRx:
+
+        // Opens Files
         FILE *outputFile = fopen(filename, "w");
         if (outputFile == NULL)
         {
-            perror("Error opening file");
+            perror("Error opening output file");
         }
+
         FILE *outputPackets = fopen("PacketsReceiver.txt", "w");
         if (outputPackets == NULL)
         {
-            perror("Error opening file");
+            perror("Error opening PacketsReceiver file");
         }
+
+        unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
+        int fileSizeReceivedStart = 0;
+
+        // Reading and handle packets
         int STOP = FALSE;
         while (STOP == FALSE)
         {
+            
             int nbytes = llread(packet);
             if (nbytes == -1)
             {
-                printf("Error when reading\n");
+                printf("Error when reading (Application Layer - Receiver)\n");
                 return;
             }
+
             if (nbytes == 0)
             {
                 printf("Not supposed to be reading, no information received\n");
                 return;
             }
 
-            if (nbytes != 0)
+            if (nbytes > 0)
             {
-                // DECOMPOSE AND SEE CONTROL BYTE
+                // Decompose and get control field
                 unsigned char controlField = packet[0];
 
                 switch (controlField)
@@ -67,63 +76,126 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
                 case 1:
 
+                    // Store filename and file size to compare in the end
+                    int i = 1;
+                    while(i < nbytes)
+                    {
+                        unsigned char type = packet[i++];
+                        unsigned char length = packet[i++];
+                        if(type == 0){
+                            memcpy(&fileSizeReceivedStart, packet+i, length);
+                            i += length;
+                        }
+                        else if(type == 1)
+                        {
+                            memcpy(filenameReceivedStart, packet+i, length);
+                            filenameReceivedStart[length] = '\0';
+                            i += length;
+                        }
+                    }
                     break;
+
                 case 2:
 
+                    // Unpack values and write to file
                     unsigned char sequenceNumber = packet[1];
                     unsigned char l2 = packet[2];
                     unsigned char l1 = packet[3];
 
-                    int k = 256 * l2 + l1;
+                    int k = 256 * (int)l2 + (int)l1;
                     int bytesWritten = 0;
+
                     if ((bytesWritten = fwrite(packet + 4, 1, k, outputFile)) < k)
                     {
-                        printf("ERROR WRITTING TO FILE IN Sequence: %u\n", sequenceNumber);
+                        printf("Error writing to file in Sequence Number: %u\n", sequenceNumber);
                         printf("[Expectations/Reality] %d/%d\n", k, bytesWritten);
                     }
-                    fprintf(outputPackets,"\n\nPACKET %d: ",packet[1]);
-                    for(int i = 4; i<k+4; i++){
-                        fprintf(outputPackets,"%x ",packet[i]);
+
+                    // Writing to file PacketsReceiver in order to better understand errors
+                    fprintf(outputPackets, "\n\nPACKET %d: ", packet[1]);
+                    for (int i = 4; i < k + 4; i++)
+                    {
+                        fprintf(outputPackets, "%x ", packet[i]);
                     }
+
                     break;
+
                 case 3:
+
+                    // Verify if filename and file size from end is equal to start
+                    int j = 1;
+                    unsigned char filenameReceivedEnd[MAX_PAYLOAD_SIZE];
+                    int fileSizeReceivedEnd = 0;
+                    while(j < nbytes)
+                    {
+                        unsigned char type = packet[j++];
+                        unsigned char length = packet[j++];
+                        if(type == 0){
+                            memcpy(&fileSizeReceivedEnd, packet+j, length);
+                            j += length;
+
+                            if(fileSizeReceivedStart != fileSizeReceivedEnd){
+                                printf("Size different in control packet start and control packet end");
+                                return;
+                            }
+                        }
+                        else if(type == 1)
+                        {
+                            memcpy(filenameReceivedEnd, packet+j, length);
+                            filenameReceivedEnd[length] = '\0';
+                            j += length;
+                            if(strcmp((const char*)filenameReceivedStart,(const char*)filenameReceivedEnd) != 0){
+                                printf("Filename different in control packet start and control packet end");
+                                return;
+                            }
+                        }
+                    }
+                    // Breaks loop since it has reached final packet
                     STOP = TRUE;
                     break;
+
                 default:
-                    printf("Error??? Not supposed to read that\n");
+
+                    printf("Error!! Wrong CONTROL FIELD in packet\n");
                     break;
                 }
             }
         }
+
+        // Closes Files
         fclose(outputFile);
         fclose(outputPackets);
         break;
 
     case LlTx:
 
+        //Opens Files
         FILE *inputFile = fopen(filename, "rb");
         if (inputFile == NULL)
         {
-            perror("Error opening file");
+            perror("Error opening input file");
         }
+
         FILE *packetT = fopen("PacketsTransmitter.txt", "w");
         if (packetT == NULL)
         {
-            perror("Error opening file");
+            perror("Error opening PacketsTransmitter file");
         }
-        // Point to the end of the file
+
+        // Get File Size
         fseek(inputFile, 0, SEEK_END);
-        // Get size
         unsigned int fileSize = ftell(inputFile);
-        // Point to the start again
         fseek(inputFile, 0, SEEK_SET);
 
-        // Write start
+        // CONTROL PACKET (Start)
+
         packet[0] = 1;
-        // file size
+
+        // File Size
         packet[1] = 0;
         packet[2] = sizeof(fileSize);
         memcpy(packet + 3, &fileSize, packet[2]);
+
         // Filename
         packet[7] = 1;
         packet[8] = (unsigned char)strlen(filename);
@@ -132,36 +204,44 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("Sending packet of %d bytes\n", packet[8] + packet[2] + 5);
         if (llwrite(packet, packet[8] + packet[2] + 5) == -1)
         {
-            printf("Error writting");
+            printf("Error when writting (Application Layer - Transmitter - Control Packet 1)\n");
             return;
         }
 
-        // Write Data
+        // DATA PACKET
+
         packet[0] = 2;
+
         int bytesRead = 0;
         while ((bytesRead = fread(packet + 4, 1, MAX_PAYLOAD_SIZE - 4, inputFile)) > 0)
         {
             printf("Sending packet of %d bytes\n", bytesRead);
-            packet[1] = sequenceNumber++;
+            packet[1] = sequenceNumber++ % (MAX_SEQUENCE_NUMBER+1); // Assure sequence number between 0-99
             packet[2] = bytesRead / 256;
             packet[3] = bytesRead % 256;
             if (llwrite(packet, bytesRead + 4) == -1)
             {
-                printf("ERROR WRITTING\n");
+                printf("Error when writting (Application Layer - Transmitter - Data Packet)\n");
                 return;
             }
-                    fprintf(packetT,"\n\nPACKET %d: ",packet[1]);
-                    for(int i = 4; i<bytesRead+4; i++){
-                        fprintf(packetT,"%x ",packet[i]);
-                    }
+
+            // Writing to file PacketsTransmitter in order to better understand errors
+            fprintf(packetT, "\n\nPACKET %d: ", packet[1]);
+            for (int i = 4; i < bytesRead + 4; i++)
+            {
+                fprintf(packetT, "%x ", packet[i]);
+            }
         }
 
-        // Write end
+        // CONTROL PACKET (END)
+
         packet[0] = 3;
-        // file size
+
+        // File Size
         packet[1] = 0;
         packet[2] = sizeof(fileSize);
         memcpy(packet + 3, &fileSize, packet[2]);
+
         // Filename
         packet[7] = 1;
         packet[8] = (unsigned char)strlen(filename);
@@ -169,14 +249,21 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         if (llwrite(packet, packet[8] + packet[2] + 5) == -1)
         {
-            printf("Error writting");
+            printf("Error when writting (Application Layer - Transmitter - Control Packet 3)\n");
             return;
         }
 
+        // Closes Files
         fclose(inputFile);
         fclose(packetT);
         break;
     }
 
-    llclose(0);
+    // Closes Connection
+    if (llclose(0) == -1)
+    {
+        printf("Unable to close connection (Application Layer)\n");
+        return;
+    }
+
 }

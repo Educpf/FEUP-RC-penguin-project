@@ -3,8 +3,7 @@
 
 # Parameters
 CC = gcc
-CFLAGS = -Wall
-
+CFLAGS = -Wall -Wextra -Wconversion -Wsign-compare -Wshadow -Wformat=2 -Wfloat-equal -Wpointer-arith -Wcast-align -Wimplicit-fallthrough -Wstrict-prototypes -pedantic -Werror
 SRC = src/
 INCLUDE = include/
 BIN = bin/

@@ -31,13 +31,13 @@ enum machineStates handleByte(unsigned char byte)
             state = START;
         break;
     case A_RCV:
-        if (byte == SET || byte == UA || byte == RR0 || byte == RR1 || byte == REJ0 || byte == REJ1)
+        if (byte == SET || byte == UA || byte == RR0 || byte == RR1 || byte == REJ0 || byte == REJ1 || byte == DISC)
             state = C_RCV;
         else if (isInfoControl(byte))
         {
             state = C_RCV;
-            if (byte == controlByte)
-                repeated = 1;
+            if (byte == controlByte) //mal feito caso rej 
+                repeated = 1; //mudei   
         }
         else if (byte == FLAG)
             state = FLAG_RCV;
@@ -58,7 +58,6 @@ enum machineStates handleByte(unsigned char byte)
         if (byte == FLAG)
         {
             // if it is sender getting OK response
-            if (isReadyToReceiveByte(controlByte)) frameNumToSend = receiveToSendControlByte(controlByte);
             state = END;    
         } 
         // If is receiver receving information
@@ -104,10 +103,20 @@ unsigned int getFrameNum() {return frameNumToSend; }
 
 void cleanMachineData()
 {
-    memset(buf, 0, BUF_SIZE);
+    memset(buf, 0, MAX_PAYLOAD_SIZE + 1);
     byteSize = 0;
     state = START;
     repeated = 0;
     escapeFound = 0;
     addressByte = 0;
+}
+
+void invertControlByte()
+{
+    controlByte = controlByte == C_INFO_0 ? C_INFO_1 : C_INFO_0;   
+}
+
+
+void invertFrameNum(){
+    frameNumToSend = frameNumToSend == C_INFO_0 ? C_INFO_1 : C_INFO_0;
 }

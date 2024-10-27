@@ -42,3 +42,7 @@ unsigned int getMachineDataSize();
 unsigned int getFrameNum();
 
 void cleanMachineData();
+
+void invertControlByte();
+
+void invertFrameNum();

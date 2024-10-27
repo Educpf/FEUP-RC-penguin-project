@@ -11,6 +11,7 @@ int fullWrite(unsigned char *data, int nBytes)
     while (nBytesWritten < nBytes)
     {
         int nbytes = writeBytesSerialPort(data + nBytesWritten, nBytes - nBytesWritten);
+
         if (nbytes == -1)
             return -1;
         nBytesWritten += nbytes;
@@ -26,41 +27,50 @@ int processInformationFrame(unsigned char *packet)
     // REPEATED
     if (isInfoRepeated() == 0)
     {
-        // ERROR
-        unsigned char Bcc = getMachineData()[getMachineDataSize() - 1];
+        unsigned int datasize = getMachineDataSize();
+        unsigned char Bcc = getMachineData()[datasize - 1];
+        printf("BCC2 in buf: %d", Bcc);
         unsigned char calculatedBcc = 0;
-        for (unsigned int i = 0; i < getMachineDataSize(); i++)
-            calculatedBcc ^= getMachineData()[i];
+        for (unsigned int i = 0; i < datasize-1; i++){
 
+            calculatedBcc ^= getMachineData()[i];
+        }
+
+        // ERROR
         if (calculatedBcc != Bcc)
         {
             printf("ERROR in BCC2\n");
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
-            if (fullWrite(response, 5) == -1)
-                return -1;
+            printf("VOU ESCREVER REJ\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+            if (fullWrite(response, 5) == -1) return -1;
+            invertControlByte();
+            cleanMachineData();
         }
         else
         {
             // OK
-            memcpy(packet, getMachineData(), getMachineDataSize() - 1);
+            memcpy(packet, getMachineData(), datasize - 1);
 
-            printf("Asking for next data frame\n");
+            printf("Asking for next data frame(OKOKOKO)\n");
             unsigned char C = RR0 + (getControlByte() == C_INFO_0);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
-            if (fullWrite(response, 5) == -1)
+            if (fullWrite(response, 5) == -1){
                 return -1;
-
-            return getMachineDataSize() - 1;
+            }
+            cleanMachineData();
+            return (datasize - 1);
         }
     }
     else
     {
-        printf("Asking for next data frame\n");
+        printf("Asking for next data frame(REPEATED)");
         unsigned char C = RR0 + (getControlByte() == C_INFO_0);
         unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
         if (fullWrite(response, 5) == -1)
             return -1;
+        cleanMachineData();
+
     }
     return 0;
 }

@@ -12,3 +12,12 @@
 
 - [ ] When using write, create function to write all the bytes
 - [ ] Receiving rej does not reset tentatives
+
+
+REJ REP
+
+start == end
+
+seq nu %
+
+PENSAR DISC

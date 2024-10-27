@@ -16,7 +16,7 @@ static LinkLayerRole role;
 
 static int frameCount = 0;
 static int retransmitionCount = 0; // Ony transmiter
-static int timeoutCount = 0; 
+static int timeoutCount = 0;
 static int rejectedCount = 0;
 
 ////////////////////////////////////////////////
@@ -32,7 +32,6 @@ int llopen(LinkLayer connectionParameters)
     timeout = connectionParameters.timeout;
     nRetransmissions = connectionParameters.nRetransmissions;
     role = connectionParameters.role;
-
 
     int STOP = FALSE;
     while (STOP == FALSE)
@@ -63,7 +62,6 @@ int llopen(LinkLayer connectionParameters)
                         if (fullWrite(response, 5) == -1)
                             return -1;
                     }
-
                     // Information frame! Connection is finished
                     if (isInfoControl(getControlByte()))
                         STOP = TRUE;
@@ -106,6 +104,7 @@ int llopen(LinkLayer connectionParameters)
                             turnOffAlarm();
                             printf("CONNECTED!!!!!!\n");
                             STOP = TRUE;
+                            cleanMachineData(); // CLEAN AFTER CONNECTES IN TRANS /X
                         }
                         // TERMINATE CONNECTION
                     }
@@ -149,11 +148,10 @@ int llwrite(const unsigned char *buf, int bufSize)
     byteNum += addByteWithStuff(bcc, dataFrame + byteNum) + 1;
     dataFrame[byteNum++] = FLAG;
 
-    for (int i = 0; i<byteNum; i++)
+    for (int i = 0; i < byteNum; i++)
     {
         printf("%x - ", dataFrame[i]);
     }
-
 
     int STOP = FALSE;
     while (STOP == FALSE)
@@ -162,7 +160,8 @@ int llwrite(const unsigned char *buf, int bufSize)
         {
         case 0:
             retransmitionCount++;
-            if (fullWrite(dataFrame, byteNum) == -1) return -1;
+            if (fullWrite(dataFrame, byteNum) == -1)
+                return -1;
             break;
 
         case 1:
@@ -176,31 +175,41 @@ int llwrite(const unsigned char *buf, int bufSize)
 
             unsigned char byte;
             int nbyte = readByteSerialPort(&byte);
-            if (nbyte == -1) return -1;
-
-            printf("Processing a byte\n");
-            printf("The state: %d\n", getMachineState());
-            printf("The byte: %x\n", byte);
-
-            if (handleByte(byte) == END)
+            if (nbyte == -1)
+                return -1;
+            if (nbyte)
             {
-                if (isRejectionByte(getControlByte()) == 0)
+                printf("Processing a byte\n");
+                printf("The state: %d\n", getMachineState());
+                printf("The byte: %x\n", byte);
+
+                if (handleByte(byte) == END)
                 {
-                     turnOffAlarm();
+
+                    turnOffAlarm();
+
+                    // GOOD INFORMATION RESPONSE
+                    if (isReadyToReceiveByte(getControlByte()))
+                    {
+                        int requestedFrame = receiveToSendControlByte(getControlByte());
+                        if(requestedFrame != getFrameNum()){
+                            STOP = TRUE;
+                            invertFrameNum();
+                        }
+
+                    }
+
+
+                    cleanMachineData();
                 }
-
-                // GOOD INFORMATION RESPONSE
-                if (isReadyToReceiveByte(getControlByte())) STOP = TRUE;
-
-                cleanMachineData();
             }
+
             break;
         }
     }
 
     return bufSize;
 }
-
 
 // -1 -> error
 // 0 -> DISC
@@ -219,11 +228,9 @@ int llread(unsigned char *packet)
             if (isInfoControl(getControlByte()))
             {
                 int bytesRead = processInformationFrame(packet);
-                if (bytesRead != 0) return bytesRead;
+                if (bytesRead != 0)
+                    return bytesRead;
             }
-
-            if (getControlByte() == DISC)
-                STOP = TRUE;
 
             cleanMachineData();
         }
@@ -233,8 +240,13 @@ int llread(unsigned char *packet)
             int nbytes = readByteSerialPort(&byte);
             if (nbytes == -1)
                 return -1;
+
             if (nbytes)
+            {
+                printf("New byte:  %x\n", byte);
+                printf("The current state -> %d", getMachineState());
                 handleByte(byte);
+            }
         }
     }
     return 0;
@@ -245,108 +257,133 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    // TODO
-
+    int disc = 0;
     int STOP = FALSE;
     while (STOP == FALSE)
     {
 
-        switch(role){
+        switch (role)
+        {
 
-            case (LlRx):
-                
+        case (LlRx):
+            if (disc == 0)
+            {
+                printf("QUERO DISC _REC\n");
+                unsigned char byte;
+                int nbyte = readByteSerialPort(&byte);
+                if (nbyte == -1)
+                    return -1;
+                if (nbyte)
+                {
+                    printf("New byte:  %x\n", byte);
+                    printf("The current state -> %d\n", getMachineState());
+                    if (handleByte(byte) == END)
+                    {
+                        if (getControlByte() == DISC)
+                        {
+                            disc = 1;
+                        }
+                         cleanMachineData();
+
+                    }
+                }
+            }
+            else
+            {
+
                 switch (setupAlarm(nRetransmissions, timeout))
                 {
 
-                    case 0:
-                        unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
-                        if (fullWrite(discFrame, 5) == -1) return -1;
-                    break;
-
-                    case 1:
+                case 0:
+                    unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
+                    printf("SENDING DISC FROM RECEIVER");
+                    if (fullWrite(discFrame, 5) == -1)
                         return -1;
                     break;
 
-                    case 2:
-                        unsigned char byte;
-                        int nbyte = readByteSerialPort(&byte); 
-                        if (nbyte == -1) return -1;
-                        if (nbyte)
-                        {
-                            
-                            if (handleByte(byte) == END)
-                            {
-                                turnOffAlarm();
-                                if (getControlByte() == UA)
-                                {
-                                    STOP = TRUE;
-                                }
-                                cleanMachineData();
-                            }
-                        }
-
+                case 1:
+                    return -1;
                     break;
 
+                case 2:
+                    unsigned char byte;
+                    int nbyte = readByteSerialPort(&byte);
+                    if (nbyte == -1)
+                        return -1;
+                    if (nbyte)
+                    {
 
+                        if (handleByte(byte) == END)
+                        {
+                            turnOffAlarm();
 
-                }           
+                            if (getControlByte() == UA)
+                            {
+                                STOP = TRUE;
+                            }
+                          cleanMachineData();
+
+                        }
+                    }
+
+                    break;
+                }
+            }
 
             break;
 
+        case (LlTx):
 
+            switch (setupAlarm(nRetransmissions, timeout))
+            {
+            case 0:
+                unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
+                printf("SENDING DISC FROM TRANSM");
+                if (fullWrite(discFrame, 5) == -1)
+                    return -1;
+                break;
 
-            case (LlTx):
+            case 1:
+                printf("MAXIMUM RETRANSMiSSIONs");
+                return -1;
+                break;
 
-                
-                switch(setupAlarm(nRetransmissions, timeout))
+            case 2:
+                unsigned char byte;
+                int nbyte = readByteSerialPort(&byte);
+                if (nbyte == -1)
+                    return -1;
+                if (nbyte)
                 {
-                    case 0:
-                        unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
-                        if (fullWrite(discFrame, 5) == -1) return -1;
-                    break;
 
-                    case 1:
-                        printf("MAXIMUM RETRANSMiSSIONs");
-                        return -1;                   
-                    break;
-                    
-                    case 2:
-                        unsigned char byte;
-                        int nbyte = readByteSerialPort(&byte);
-                        if (nbyte == -1) return -1;
-                        if (nbyte)
+                    if (handleByte(byte) == END)
+                    {
+                        turnOffAlarm();
+                        if (getControlByte() == DISC)
                         {
-                            
-                            if (handleByte(byte) == END)
+                            unsigned char responseFrame[5] = {FLAG, AR, UA, AR ^ UA, FLAG};
+                            if (fullWrite(responseFrame, 5) == -1)
+                                return -1;
+                            STOP = TRUE;
+
+                            // WRITE STATISTICS
+                            if (showStatistics)
                             {
-                                turnOffAlarm();
-                                
-                                if (getControlByte() == DISC)
-                                {
-                                    unsigned char responseFrame[5] = {FLAG, AR, UA, AR ^ UA, FLAG};
-                                    if (fullWrite(responseFrame, 5) == -1) return -1;
-                                    STOP = TRUE;
-
-                                    // WRITE STATISTICS
-                                    if (showStatistics)
-                                    {
-                                        printf("-- STATISTICS --\n");
-                                        printf("Frames : %d\n", frameCount);
-                                        printf("Retransmitions : %d\n", retransmitionCount);
-                                        printf("Timeouts : %d\n", timeoutCount);
-                                        printf("Rejected frames : %d\n", rejectedCount);
-                                    }
-                                }
-
-                                cleanMachineData();
+                                printf("-- STATISTICS --\n");
+                                printf("Frames : %d\n", frameCount);
+                                printf("Retransmitions : %d\n", retransmitionCount);
+                                printf("Timeouts : %d\n", timeoutCount);
+                                printf("Rejected frames : %d\n", rejectedCount);
                             }
                         }
-                        
-                    break;
-                    
-                    
-                }  
+
+                        cleanMachineData();
+                    }
+                }
+
                 break;
+            }
+            break;
         }
     }
 

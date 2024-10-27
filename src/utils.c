@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern FILE* file;
+
 int fullWrite(unsigned char *data, int nBytes)
 {
     int nBytesWritten = 0;
@@ -39,10 +41,9 @@ int processInformationFrame(unsigned char *packet)
         // ERROR
         if (calculatedBcc != Bcc)
         {
-            printf("ERROR in BCC2\n");
+            fprintf(file,"ERROR in BCC2\n");
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
-            printf("VOU ESCREVER REJ\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
             if (fullWrite(response, 5) == -1) return -1;
             invertControlByte();
             cleanMachineData();
@@ -52,7 +53,7 @@ int processInformationFrame(unsigned char *packet)
             // OK
             memcpy(packet, getMachineData(), datasize - 1);
 
-            printf("Asking for next data frame(OKOKOKO)\n");
+            fprintf(file,"Asking for next data frame(OKOKOKO)\n");
             unsigned char C = RR0 + (getControlByte() == C_INFO_0);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
             if (fullWrite(response, 5) == -1){
@@ -64,7 +65,7 @@ int processInformationFrame(unsigned char *packet)
     }
     else
     {
-        printf("Asking for next data frame(REPEATED)");
+        fprintf(file,"Asking for next data frame(REPEATED)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         unsigned char C = RR0 + (getControlByte() == C_INFO_0);
         unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
         if (fullWrite(response, 5) == -1)

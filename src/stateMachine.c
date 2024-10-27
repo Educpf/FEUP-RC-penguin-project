@@ -3,16 +3,14 @@
 #include "link_layer.h"
 #include <string.h>
 
-static unsigned char addressByte, controlByte;
+static unsigned char addressByte, controlByte, newControl;
 static enum machineStates state = START;
-                    //  MAXIMUM_DATA + BCC2
-static unsigned char buf[MAX_PAYLOAD_SIZE + 1] = {0}; 
+//  MAXIMUM_DATA + BCC2
+static unsigned char buf[MAX_PAYLOAD_SIZE + 1] = {0};
 static unsigned int byteSize = 0;
 static unsigned char repeated = 0;
 static unsigned char escapeFound = 0;
 static unsigned int frameNumToSend = 0;
-
-
 
 enum machineStates handleByte(unsigned char byte)
 {
@@ -31,23 +29,17 @@ enum machineStates handleByte(unsigned char byte)
             state = START;
         break;
     case A_RCV:
-        if (byte == SET || byte == UA || byte == RR0 || byte == RR1 || byte == REJ0 || byte == REJ1 || byte == DISC)
+        if (byte == SET || byte == UA || byte == RR0 || byte == RR1 || byte == REJ0 || byte == REJ1 || byte == DISC || isInfoControl(byte))
             state = C_RCV;
-        else if (isInfoControl(byte))
-        {
-            state = C_RCV;
-            if (byte == controlByte) //mal feito caso rej 
-                repeated = 1; //mudei   
-        }
         else if (byte == FLAG)
             state = FLAG_RCV;
         else
             state = START;
 
-        controlByte = byte;
+        newControl = byte;
         break;
     case C_RCV:
-        if (byte == (addressByte ^ controlByte)) 
+        if (byte == (addressByte ^ newControl))
             state = BCC_OK;
         else if (byte == FLAG)
             state = FLAG_RCV;
@@ -58,48 +50,56 @@ enum machineStates handleByte(unsigned char byte)
         if (byte == FLAG)
         {
             // if it is sender getting OK response
-            state = END;    
-        } 
+            state = END;
+            if (isInfoControl(newControl))
+            {
+                if (newControl == controlByte) 
+                    repeated = 1;              
+            }
+            controlByte = newControl;
+        }
         // If is receiver receving information
-        else if (isInfoControl(controlByte) && addressByte == AS)
+        else if (isInfoControl(newControl) && addressByte == AS)
         {
-            if (byte == ESC) escapeFound = 1;
+            if (byte == ESC)
+                escapeFound = 1;
             else
             {
                 if (escapeFound)
                 {
-                    if (byte == ESCAPED_FLAG) byte = FLAG;
-                    else if (byte == ESCAPED_ESC) byte = ESC;
+                    if (byte == ESCAPED_FLAG)
+                        byte = FLAG;
+                    else if (byte == ESCAPED_ESC)
+                        byte = ESC;
                     escapeFound = 0;
                 }
                 buf[byteSize] = byte;
                 byteSize++;
             }
         }
-        else state = START; 
+        else
+            state = START;
         break;
     case END:
-        
-    break;
+
+        break;
     default:
         break;
     }
     return state;
 }
 
-enum machineStates getMachineState() {return state;}
+enum machineStates getMachineState() { return state; }
 
-enum machineStates getControlByte() {return controlByte;}
+enum machineStates getControlByte() { return controlByte; }
 
-unsigned char isInfoRepeated() {return repeated; }
+unsigned char isInfoRepeated() { return repeated; }
 
-unsigned char* getMachineData() {return buf;}
+unsigned char *getMachineData() { return buf; }
 
-unsigned int getMachineDataSize() {return byteSize; }
+unsigned int getMachineDataSize() { return byteSize; }
 
-unsigned int getFrameNum() {return frameNumToSend; }
-
-
+unsigned int getFrameNum() { return frameNumToSend; }
 
 void cleanMachineData()
 {
@@ -113,10 +113,10 @@ void cleanMachineData()
 
 void invertControlByte()
 {
-    controlByte = controlByte == C_INFO_0 ? C_INFO_1 : C_INFO_0;   
+    controlByte = controlByte == C_INFO_0 ? C_INFO_1 : C_INFO_0;
 }
 
-
-void invertFrameNum(){
+void invertFrameNum()
+{
     frameNumToSend = frameNumToSend == C_INFO_0 ? C_INFO_1 : C_INFO_0;
 }

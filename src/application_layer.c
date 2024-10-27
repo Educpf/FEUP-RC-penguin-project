@@ -37,6 +37,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         {
             perror("Error opening file");
         }
+        FILE *outputPackets = fopen("PacketsReceiver.txt", "w");
+        if (outputPackets == NULL)
+        {
+            perror("Error opening file");
+        }
         int STOP = FALSE;
         while (STOP == FALSE)
         {
@@ -76,7 +81,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         printf("ERROR WRITTING TO FILE IN Sequence: %u\n", sequenceNumber);
                         printf("[Expectations/Reality] %d/%d\n", k, bytesWritten);
                     }
-
+                    fprintf(outputPackets,"\n\nPACKET %d: ",packet[1]);
+                    for(int i = 4; i<k+4; i++){
+                        fprintf(outputPackets,"%x ",packet[i]);
+                    }
                     break;
                 case 3:
                     STOP = TRUE;
@@ -88,12 +96,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
         }
         fclose(outputFile);
+        fclose(outputPackets);
         break;
 
     case LlTx:
 
         FILE *inputFile = fopen(filename, "rb");
         if (inputFile == NULL)
+        {
+            perror("Error opening file");
+        }
+        FILE *packetT = fopen("PacketsTransmitter.txt", "w");
+        if (packetT == NULL)
         {
             perror("Error opening file");
         }
@@ -136,6 +150,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 printf("ERROR WRITTING\n");
                 return;
             }
+                    fprintf(packetT,"\n\nPACKET %d: ",packet[1]);
+                    for(int i = 4; i<bytesRead+4; i++){
+                        fprintf(packetT,"%x ",packet[i]);
+                    }
         }
 
         // Write end
@@ -156,6 +174,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
 
         fclose(inputFile);
+        fclose(packetT);
         break;
     }
 

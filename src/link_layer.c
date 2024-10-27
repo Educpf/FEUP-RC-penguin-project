@@ -18,6 +18,7 @@ static int frameCount = 0;
 static int retransmitionCount = 0; // Ony transmiter
 static int timeoutCount = 0;
 static int rejectedCount = 0;
+FILE *file;
 
 ////////////////////////////////////////////////
 // LLOPEN
@@ -32,6 +33,12 @@ int llopen(LinkLayer connectionParameters)
     timeout = connectionParameters.timeout;
     nRetransmissions = connectionParameters.nRetransmissions;
     role = connectionParameters.role;
+
+    file = fopen("output.txt", "w");
+    if (file == NULL)
+    {
+        perror("Error opening file");
+    }
 
     int STOP = FALSE;
     while (STOP == FALSE)
@@ -192,13 +199,12 @@ int llwrite(const unsigned char *buf, int bufSize)
                     if (isReadyToReceiveByte(getControlByte()))
                     {
                         int requestedFrame = receiveToSendControlByte(getControlByte());
-                        if(requestedFrame != getFrameNum()){
+                        if (requestedFrame != getFrameNum())
+                        {
                             STOP = TRUE;
                             invertFrameNum();
                         }
-
                     }
-
 
                     cleanMachineData();
                 }
@@ -243,8 +249,8 @@ int llread(unsigned char *packet)
 
             if (nbytes)
             {
-                printf("New byte:  %x\n", byte);
-                printf("The current state -> %d", getMachineState());
+                fprintf(file,"New byte:  %x\n", byte);
+                fprintf(file,"The current state -> %d", getMachineState());
                 handleByte(byte);
             }
         }
@@ -283,8 +289,7 @@ int llclose(int showStatistics)
                         {
                             disc = 1;
                         }
-                         cleanMachineData();
-
+                        cleanMachineData();
                     }
                 }
             }
@@ -321,8 +326,7 @@ int llclose(int showStatistics)
                             {
                                 STOP = TRUE;
                             }
-                          cleanMachineData();
-
+                            cleanMachineData();
                         }
                     }
 
@@ -386,7 +390,7 @@ int llclose(int showStatistics)
             break;
         }
     }
-
+    fclose(file);
     int clstat = closeSerialPort();
     return clstat;
 }

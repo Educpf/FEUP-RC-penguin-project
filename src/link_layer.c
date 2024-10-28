@@ -14,7 +14,7 @@ static int timeout;
 static int nRetransmissions;
 static LinkLayerRole role;
 
-Statistics statsData;
+Statistics stats;
 FILE *file;
 
 int llopen(LinkLayer connectionParameters)
@@ -31,7 +31,7 @@ int llopen(LinkLayer connectionParameters)
     nRetransmissions = connectionParameters.nRetransmissions;
     role = connectionParameters.role;
 
-    statsConstructor(&statsData);
+    statsConstructor(&stats);
 
     // Opens file to store data to better understand errors
     file = fopen("output.txt", "w"); // change name ahabsknqifbnefc
@@ -64,7 +64,7 @@ int llopen(LinkLayer connectionParameters)
                 if (handleByte(byte) == END)
                 {
                     printf("Reached the end\n");
-
+                    //stats.frameCount++;
                     // SET Frame Received
                     if (getControlByte() == SET)
                     {
@@ -75,6 +75,7 @@ int llopen(LinkLayer connectionParameters)
                             printf("Error Sending UA (Open - Receiver)\n");
                             return -1;
                         }
+                        //stats.approvedCount++;
                     }
                     // Information Frame Received! Connection is finished
                     if (isInfoControl(getControlByte()))
@@ -193,7 +194,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 printf("Error Sending Information Frame (Link Layer - Write)\n");
                 return -1;
             }
-            statsData.frameCount++;
+            stats.frameCount++;
             break;
         }
         case 1:
@@ -223,7 +224,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 {
                     turnOffAlarm();
                     if (isRejectionByte(getControlByte()))
-                        statsData.rejectedCount++;
+                        stats.rejectedCount++;
                     // GOOD INFORMATION RESPONSE
                     if (isReadyToReceiveByte(getControlByte()))
                     {
@@ -254,10 +255,10 @@ int llread(unsigned char *packet)
         // Verify Machine State
         if (getMachineState() == END)
         {
+            stats.frameCount++;
             // Information Frame
             if (isInfoControl(getControlByte()))
             {
-                statsData.frameCount++;
                 int bytesRead = processInformationFrame(packet);
                 if (bytesRead == -1)
                 {
@@ -379,11 +380,11 @@ int llclose(int showStatistics)
                                 if (showStatistics)
                                 {
                                     printf("-- STATISTICS --\n");
-                                    printf("Number of Frames Received: %d\n", statsData.frameCount);
-                                    printf("Number of Timeouts: %d\n", statsData.timeoutCount);
-                                    printf("Number of Approved Frames: %d\n", statsData.approvedCount);
-                                    printf("Number of Rejected Frames: %d\n", statsData.rejectedCount);
-                                    printf("Number of Repeated Frames: %d\n", statsData.repeatedCount);
+                                    printf("Number of Frames Received: %d\n", stats.frameCount);
+                                    printf("Number of Timeouts: %d\n", stats.timeoutCount);
+                                    printf("Number of Approved Frames: %d\n", stats.approvedCount);
+                                    printf("Number of Rejected Frames: %d\n", stats.rejectedCount);
+                                    printf("Number of Repeated Frames: %d\n", stats.repeatedCount);
                                 }
                             }
                             cleanMachineData();
@@ -450,9 +451,9 @@ int llclose(int showStatistics)
                             if (showStatistics)
                             {
                                 printf("-- STATISTICS --\n");
-                                printf("Number of Frames Sent: %d\n", statsData.frameCount);
-                                printf("Number of Timeouts: %d\n", statsData.timeoutCount);
-                                printf("Number of Rejected Frames: %d\n", statsData.rejectedCount);
+                                printf("Number of Frames Sent: %d\n", stats.frameCount);
+                                printf("Number of Timeouts: %d\n", stats.timeoutCount);
+                                printf("Number of Rejected Frames: %d\n", stats.rejectedCount);
                             }
                         }
                         cleanMachineData();

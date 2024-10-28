@@ -76,8 +76,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
                 case 1:
                 {
+                    for(int l = 0; l < nbytes; l++){
+                        printf("%x-",packet[l]);
+                    }
                     // Store filename and file size to compare in the end
-                    int i = 1;
+                    // TODO - CAST LENGHT TO INT ???
+                    // CREATE FUNCTION TO GET STUFF?? OU seja, tirar loop?  Tipo, não acontece. Mas se quiseres mudar no transmitter nao precisas
+                    int i = 1;  
                     while (i < nbytes)
                     {
                         unsigned char type = packet[i++];
@@ -85,13 +90,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         if (type == 0)
                         {
                             memcpy(&fileSizeReceivedStart, packet + i, length);
-                            i += length;
+                            i += (int)length;
                         }
                         else if (type == 1)
                         {
                             memcpy(filenameReceivedStart, packet + i, length);
                             filenameReceivedStart[length] = '\0';
-                            i += length;
+                            printf("filename(start):%s",filenameReceivedStart);
+                            i += (int)length;
                         }
                     }
                     break;
@@ -136,7 +142,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         if (type == 0)
                         {
                             memcpy(&fileSizeReceivedEnd, packet + j, length);
-                            j += length;
+                            j += (int)length;
 
                             if (fileSizeReceivedStart != fileSizeReceivedEnd)
                             {
@@ -148,13 +154,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         {
                             memcpy(filenameReceivedEnd, packet + j, length);
                             filenameReceivedEnd[length] = '\0';
-                            j += length;
-                            if (strcmp((const char *)filenameReceivedStart, (const char *)filenameReceivedEnd) != 0)
-                            {
-                                printf("Filename different in control packet start and control packet end");
-                                return;
-                            }
+                            printf("filename(end):%s",filenameReceivedEnd);
+                            j += (int)length;
                         }
+                    }
+                    if (strcmp((const char *)filenameReceivedStart, (const char *)filenameReceivedEnd) != 0)
+                    {
+                    printf("Filename different in control packet start and control packet end");
+                    return;
                     }
                     // Breaks loop since it has reached final packet
                     STOP = TRUE;
@@ -168,6 +175,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 }
                 }
             }
+            
         }
 
         // Closes Files
@@ -196,8 +204,10 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         long int fileSize = ftell(inputFile);
         fseek(inputFile, 0, SEEK_SET);
 
-        // CONTROL PACKET (Start)
 
+
+        // TODO - FIX NUMBERS
+        // CONTROL PACKET (Start)
         packet[0] = 1;
 
         // File Size
@@ -206,12 +216,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         memcpy(packet + 3, &fileSize, packet[2]);
 
         // Filename
-        packet[7] = 1;
-        packet[8] = (unsigned char)strlen(filename);
-        memcpy(packet + 9, filename, packet[8]);
+        packet[11] = 1;
+        packet[12] = (unsigned char)strlen(filename)+1;
+        memcpy(packet + 13, filename, packet[12]);
 
-        printf("Sending packet of %d bytes\n", packet[8] + packet[2] + 5);
-        if (llwrite(packet, packet[8] + packet[2] + 5) == -1)
+        printf("Sending packet of %d bytes\n", packet[2] + packet[12] + 5);
+        if (llwrite(packet, packet[2] + packet[12] + 5) == -1)
         {
             printf("Error when writting (Application Layer - Transmitter - Control Packet 1)\n");
             return;
@@ -242,8 +252,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
         }
 
-        // CONTROL PACKET (END)
 
+        // TODO  - FIX NUMBERS
+        // CONTROL PACKET (END)
         packet[0] = 3;
 
         // File Size
@@ -252,11 +263,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         memcpy(packet + 3, &fileSize, packet[2]);
 
         // Filename
-        packet[7] = 1;
-        packet[8] = (unsigned char)strlen(filename);
-        memcpy(packet + 9, filename, packet[8]);
+        packet[11] = 1;
+        packet[12] = (unsigned char)strlen(filename)+1;
+        memcpy(packet + 13, filename, packet[12]);
 
-        if (llwrite(packet, packet[8] + packet[2] + 5) == -1)
+        if (llwrite(packet, packet[2] + packet[12] + 5) == -1)
         {
             printf("Error when writting (Application Layer - Transmitter - Control Packet 3)\n");
             return;

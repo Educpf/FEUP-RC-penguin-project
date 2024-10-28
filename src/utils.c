@@ -6,7 +6,7 @@
 #include <string.h>
 
 extern FILE* file;
-extern Statistics statsData;
+extern Statistics stats;
 //HHHHHHHHHHHHHHH
 int fullWrite(unsigned char *data, int nBytes)
 {
@@ -54,7 +54,7 @@ int processInformationFrame(unsigned char *packet)
                 printf("Error Sending REJ Frame (Link Layer - Read)\n");
                 return -1;
             }
-            statsData.rejectedCount++;
+            stats.rejectedCount++;
             invertControlByte();
             cleanMachineData();
         }
@@ -70,7 +70,7 @@ int processInformationFrame(unsigned char *packet)
                 printf("Error Sending RR Frame (Link Layer - Read)\n");
                 return -1;
             }
-            statsData.approvedCount++;
+            stats.approvedCount++;
             cleanMachineData();
             return (datasize - 1);
         }
@@ -86,7 +86,7 @@ int processInformationFrame(unsigned char *packet)
             printf("Error Sending RR Frame - Repeated (Link Layer - Read)\n");
             return -1;
         }
-        statsData.repeatedCount++;
+        stats.repeatedCount++;
         cleanMachineData();
 
     }

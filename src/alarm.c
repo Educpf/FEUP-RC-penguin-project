@@ -14,14 +14,14 @@
 
 int alarmEnabled = FALSE;
 int alarmCount = 0;
-extern Statistics statsData;
+extern Statistics stats;
 
 // Alarm function handler
 void alarmHandler(int signal)
 {
     alarmEnabled = FALSE;
     alarmCount++;
-    statsData.timeoutCount++;
+    stats.timeoutCount++;
 
     printf("Alarm #%d\n", alarmCount);
 }

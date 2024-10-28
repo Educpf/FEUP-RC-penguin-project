@@ -73,8 +73,15 @@ enum machineStates handleByte(unsigned char byte)
                         byte = ESC;
                     escapeFound = 0;
                 }
-                buf[byteSize] = byte;
-                byteSize++;
+                // TODO - Verificar se byteSize < tamanho máximo do buffer!!!
+                if (byteSize < MAX_PAYLOAD_SIZE + 1)
+                {
+                    buf[byteSize] = byte;
+                    byteSize++;
+                }else
+                {
+                    cleanMachineData();
+                }
             }
         }
         else

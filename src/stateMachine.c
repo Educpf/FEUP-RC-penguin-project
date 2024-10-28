@@ -7,10 +7,10 @@ static unsigned char addressByte, controlByte, newControl;
 static enum machineStates state = START;
 //  MAXIMUM_DATA + BCC2
 static unsigned char buf[MAX_PAYLOAD_SIZE + 1] = {0};
-static unsigned int byteSize = 0;
+static int byteSize = 0;
 static unsigned char repeated = 0;
 static unsigned char escapeFound = 0;
-static unsigned int frameNumToSend = 0;
+static int frameNumToSend = 0;
 
 enum machineStates handleByte(unsigned char byte)
 {
@@ -97,9 +97,9 @@ unsigned char isInfoRepeated() { return repeated; }
 
 unsigned char *getMachineData() { return buf; }
 
-unsigned int getMachineDataSize() { return byteSize; }
+int getMachineDataSize() { return byteSize; }
 
-unsigned int getFrameNum() { return frameNumToSend; }
+int getFrameNum() { return frameNumToSend; }
 
 void cleanMachineData()
 {

@@ -18,7 +18,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     linkLayer.baudRate = baudRate;
     linkLayer.nRetransmissions = nTries;
     linkLayer.timeout = timeout;
-    int sequenceNumber = 0;
+    int currentSequenceNumber = 0;
 
     if (llopen(linkLayer) == -1)
     {
@@ -31,7 +31,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     {
 
     case LlRx:
-
+    {
         // Opens Files
         FILE *outputFile = fopen(filename, "w");
         if (outputFile == NULL)
@@ -52,7 +52,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         int STOP = FALSE;
         while (STOP == FALSE)
         {
-            
+
             int nbytes = llread(packet);
             if (nbytes == -1)
             {
@@ -75,28 +75,30 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 {
 
                 case 1:
-
+                {
                     // Store filename and file size to compare in the end
                     int i = 1;
-                    while(i < nbytes)
+                    while (i < nbytes)
                     {
                         unsigned char type = packet[i++];
                         unsigned char length = packet[i++];
-                        if(type == 0){
-                            memcpy(&fileSizeReceivedStart, packet+i, length);
+                        if (type == 0)
+                        {
+                            memcpy(&fileSizeReceivedStart, packet + i, length);
                             i += length;
                         }
-                        else if(type == 1)
+                        else if (type == 1)
                         {
-                            memcpy(filenameReceivedStart, packet+i, length);
+                            memcpy(filenameReceivedStart, packet + i, length);
                             filenameReceivedStart[length] = '\0';
                             i += length;
                         }
                     }
                     break;
+                }
 
                 case 2:
-
+                {
                     // Unpack values and write to file
                     unsigned char sequenceNumber = packet[1];
                     unsigned char l2 = packet[2];
@@ -105,7 +107,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     int k = 256 * (int)l2 + (int)l1;
                     int bytesWritten = 0;
 
-                    if ((bytesWritten = fwrite(packet + 4, 1, k, outputFile)) < k)
+                    if ((bytesWritten = (int)fwrite(packet + 4, 1,(size_t)k, outputFile)) < k)
                     {
                         printf("Error writing to file in Sequence Number: %u\n", sequenceNumber);
                         printf("[Expectations/Reality] %d/%d\n", k, bytesWritten);
@@ -113,38 +115,42 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
                     // Writing to file PacketsReceiver in order to better understand errors
                     fprintf(outputPackets, "\n\nPACKET %d: ", packet[1]);
-                    for (int i = 4; i < k + 4; i++)
+                    for (int d = 4; d < k + 4; d++)
                     {
-                        fprintf(outputPackets, "%x ", packet[i]);
+                        fprintf(outputPackets, "%x ", packet[d]);
                     }
 
                     break;
+                }
 
                 case 3:
-
+                {
                     // Verify if filename and file size from end is equal to start
                     int j = 1;
                     unsigned char filenameReceivedEnd[MAX_PAYLOAD_SIZE];
                     int fileSizeReceivedEnd = 0;
-                    while(j < nbytes)
+                    while (j < nbytes)
                     {
                         unsigned char type = packet[j++];
                         unsigned char length = packet[j++];
-                        if(type == 0){
-                            memcpy(&fileSizeReceivedEnd, packet+j, length);
+                        if (type == 0)
+                        {
+                            memcpy(&fileSizeReceivedEnd, packet + j, length);
                             j += length;
 
-                            if(fileSizeReceivedStart != fileSizeReceivedEnd){
+                            if (fileSizeReceivedStart != fileSizeReceivedEnd)
+                            {
                                 printf("Size different in control packet start and control packet end");
                                 return;
                             }
                         }
-                        else if(type == 1)
+                        else if (type == 1)
                         {
-                            memcpy(filenameReceivedEnd, packet+j, length);
+                            memcpy(filenameReceivedEnd, packet + j, length);
                             filenameReceivedEnd[length] = '\0';
                             j += length;
-                            if(strcmp((const char*)filenameReceivedStart,(const char*)filenameReceivedEnd) != 0){
+                            if (strcmp((const char *)filenameReceivedStart, (const char *)filenameReceivedEnd) != 0)
+                            {
                                 printf("Filename different in control packet start and control packet end");
                                 return;
                             }
@@ -153,11 +159,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     // Breaks loop since it has reached final packet
                     STOP = TRUE;
                     break;
+                }
 
                 default:
-
+                {
                     printf("Error!! Wrong CONTROL FIELD in packet\n");
                     break;
+                }
                 }
             }
         }
@@ -166,10 +174,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         fclose(outputFile);
         fclose(outputPackets);
         break;
+    }
 
     case LlTx:
-
-        //Opens Files
+    {
+        // Opens Files
         FILE *inputFile = fopen(filename, "rb");
         if (inputFile == NULL)
         {
@@ -184,7 +193,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
         // Get File Size
         fseek(inputFile, 0, SEEK_END);
-        unsigned int fileSize = ftell(inputFile);
+        long int fileSize = ftell(inputFile);
         fseek(inputFile, 0, SEEK_SET);
 
         // CONTROL PACKET (Start)
@@ -213,12 +222,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         packet[0] = 2;
 
         int bytesRead = 0;
-        while ((bytesRead = fread(packet + 4, 1, MAX_PAYLOAD_SIZE - 4, inputFile)) > 0)
+        while ((bytesRead = (int)fread(packet + 4, 1, (size_t)(MAX_PAYLOAD_SIZE - 4), inputFile)) > 0)
         {
             printf("Sending packet of %d bytes\n", bytesRead);
-            packet[1] = sequenceNumber++ % (MAX_SEQUENCE_NUMBER+1); // Assure sequence number between 0-99
-            packet[2] = bytesRead / 256;
-            packet[3] = bytesRead % 256;
+            packet[1] = (unsigned char)(currentSequenceNumber++ % (MAX_SEQUENCE_NUMBER + 1)); // Assure sequence number between 0-99
+            packet[2] = (unsigned char)(bytesRead / 256);
+            packet[3] = (unsigned char)(bytesRead % 256);
             if (llwrite(packet, bytesRead + 4) == -1)
             {
                 printf("Error when writting (Application Layer - Transmitter - Data Packet)\n");
@@ -258,12 +267,12 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         fclose(packetT);
         break;
     }
+    }
 
     // Closes Connection
-    if (llclose(0) == -1)
+    if (llclose(1) == -1)
     {
         printf("Unable to close connection (Application Layer)\n");
         return;
     }
-
 }

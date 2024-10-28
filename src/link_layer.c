@@ -14,10 +14,7 @@ static int timeout;
 static int nRetransmissions;
 static LinkLayerRole role;
 
-static int frameCount = 0;
-static int retransmitionCount = 0; // Only transmiter
-static int timeoutCount = 0;
-static int rejectedCount = 0;
+Statistics statsData;
 FILE *file;
 
 int llopen(LinkLayer connectionParameters)
@@ -34,8 +31,10 @@ int llopen(LinkLayer connectionParameters)
     nRetransmissions = connectionParameters.nRetransmissions;
     role = connectionParameters.role;
 
+    statsConstructor(&statsData);
+
     // Opens file to store data to better understand errors
-    file = fopen("output.txt", "w"); //change name ahabsknqifbnefc
+    file = fopen("output.txt", "w"); // change name ahabsknqifbnefc
     if (file == NULL)
     {
         perror("Error opening file");
@@ -48,6 +47,7 @@ int llopen(LinkLayer connectionParameters)
         {
 
         case (LlRx):
+        {
             unsigned char byte;
             int nbytes = readByteSerialPort(&byte);
             if (nbytes == -1)
@@ -86,14 +86,14 @@ int llopen(LinkLayer connectionParameters)
                 }
             }
             break;
-
+        }
         case (LlTx):
 
             switch (setupAlarm(nRetransmissions, timeout))
             {
 
             case 0:
-
+            {
                 // Send SET Frame
                 unsigned char setFrame[5] = {FLAG, AS, SET, AS ^ SET, FLAG};
                 if (fullWrite(setFrame, 5) == -1)
@@ -102,15 +102,16 @@ int llopen(LinkLayer connectionParameters)
                     return -1;
                 }
                 break;
+            }
 
             case 1:
-
+            {
                 printf("MAXIMUM TENTATIVES REACHED! (Open - Transmitter)\n");
                 return -1;
                 break;
-
+            }
             case 2:
-
+            {
                 // Waits response to SET
                 unsigned char byte;
                 int nbyte = readByteSerialPort(&byte);
@@ -140,6 +141,7 @@ int llopen(LinkLayer connectionParameters)
                 }
                 break;
             }
+            }
             break;
         }
     }
@@ -149,20 +151,18 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
 
-    frameCount++; // Est PERdido
-
     unsigned char dataFrame[bufSize * 2 + 7];
 
     dataFrame[0] = FLAG;
     dataFrame[1] = AS;
-    dataFrame[2] = getFrameNum();
-    dataFrame[3] = AS ^ getFrameNum();
+    dataFrame[2] = (unsigned char)getFrameNum();
+    dataFrame[3] = (unsigned char)(AS ^ getFrameNum());
 
     unsigned char bcc = 0;
-    unsigned int byteNum = 4;
+    int byteNum = 4;
 
     // Iterates through buffer and stores stuffed bytes in dataFrame
-    for (unsigned int i = 0; i < bufSize; i++)
+    for (int i = 0; i < bufSize; i++)
     {
         unsigned char transferByte = buf[i];
         bcc ^= transferByte;
@@ -186,24 +186,24 @@ int llwrite(const unsigned char *buf, int bufSize)
         {
 
         case 0:
-
-            retransmitionCount++; // Est
+        {
             // Sends dataFrame to Serial Port
             if (fullWrite(dataFrame, byteNum) == -1)
             {
                 printf("Error Sending Information Frame (Link Layer - Write)\n");
                 return -1;
             }
+            statsData.frameCount++;
             break;
-
+        }
         case 1:
-
+        {
             printf("MAXIMUM TENTATIVES REACHED! (Link Layer - Write)\n");
             return -1;
             break;
-
+        }
         case 2:
-            
+        {
             // Waits response to Information Frame sended
             unsigned char byte;
             int nbyte = readByteSerialPort(&byte);
@@ -222,10 +222,12 @@ int llwrite(const unsigned char *buf, int bufSize)
                 if (handleByte(byte) == END)
                 {
                     turnOffAlarm();
+                    if (isRejectionByte(getControlByte()))
+                        statsData.rejectedCount++;
                     // GOOD INFORMATION RESPONSE
                     if (isReadyToReceiveByte(getControlByte()))
                     {
-                        int requestedFrame = receiveToSendControlByte(getControlByte());
+                        int requestedFrame = (int)receiveToSendControlByte(getControlByte());
                         // Assures that requested frame is really the supposed to send
                         if (requestedFrame != getFrameNum())
                         {
@@ -238,10 +240,10 @@ int llwrite(const unsigned char *buf, int bufSize)
             }
             break;
         }
+        }
     }
     return bufSize;
 }
-
 
 int llread(unsigned char *packet)
 {
@@ -255,12 +257,15 @@ int llread(unsigned char *packet)
             // Information Frame
             if (isInfoControl(getControlByte()))
             {
+                statsData.frameCount++;
                 int bytesRead = processInformationFrame(packet);
-                if(bytesRead == -1){
+                if (bytesRead == -1)
+                {
                     printf("Error when processing received data (Link Layer - Read)\n");
                     return -1;
                 }
-                if (bytesRead != 0){
+                if (bytesRead != 0)
+                {
                     return bytesRead;
                 }
             }
@@ -268,7 +273,7 @@ int llread(unsigned char *packet)
         }
         else
         {
-            //Reads and handles byte from Serial Port
+            // Reads and handles byte from Serial Port
             unsigned char byte;
             int nbytes = readByteSerialPort(&byte);
             if (nbytes == -1)
@@ -286,9 +291,8 @@ int llread(unsigned char *packet)
             }
         }
     }
-    return -1; //Acho que sim
+    return -1; // Acho que sim
 }
-
 
 int llclose(int showStatistics)
 {
@@ -300,7 +304,7 @@ int llclose(int showStatistics)
         {
 
         case (LlRx):
-            // Waiting DISC from Transmitter
+        { // Waiting DISC from Transmitter
             if (disc == 0)
             {
                 unsigned char byte;
@@ -333,9 +337,9 @@ int llclose(int showStatistics)
                 {
 
                 case 0:
-
+                {
                     // Sends DISC Frame to Transmitter
-                    unsigned char discFrame[5] = {FLAG, AR, DISC, AR ^ DISC, FLAG}; 
+                    unsigned char discFrame[5] = {FLAG, AR, DISC, AR ^ DISC, FLAG};
                     printf("SENDING DISC FROM RECEIVER");
                     if (fullWrite(discFrame, 5) == -1)
                     {
@@ -343,16 +347,17 @@ int llclose(int showStatistics)
                         return -1;
                     }
                     break;
+                }
 
                 case 1:
-
+                {
                     printf("MAXIMUM TENTATIVES REACHED! (Close - Receiver)\n");
                     return -1;
                     break;
-
+                }
                 case 2:
-
-                    //Waits UA from Transmitter
+                {
+                    // Waits UA from Transmitter
                     unsigned char byte;
                     int nbyte = readByteSerialPort(&byte);
                     if (nbyte == -1)
@@ -370,22 +375,34 @@ int llclose(int showStatistics)
                             if (getControlByte() == UA)
                             {
                                 STOP = TRUE;
+                                // Show Statistics
+                                if (showStatistics)
+                                {
+                                    printf("-- STATISTICS --\n");
+                                    printf("Number of Frames Received: %d\n", statsData.frameCount);
+                                    printf("Number of Timeouts: %d\n", statsData.timeoutCount);
+                                    printf("Number of Approved Frames: %d\n", statsData.approvedCount);
+                                    printf("Number of Rejected Frames: %d\n", statsData.rejectedCount);
+                                    printf("Number of Repeated Frames: %d\n", statsData.repeatedCount);
+                                }
                             }
                             cleanMachineData();
                         }
                     }
                     break;
                 }
+                }
             }
             break;
+        }
 
         case (LlTx):
-
+        {
             switch (setupAlarm(nRetransmissions, timeout))
             {
-    
+
             case 0:
-                // Sends DISC Frame to Receiver
+            { // Sends DISC Frame to Receiver
                 unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
                 printf("SENDING DISC FROM TRANSM");
                 if (fullWrite(discFrame, 5) == -1)
@@ -394,15 +411,17 @@ int llclose(int showStatistics)
                     return -1;
                 }
                 break;
+            }
 
             case 1:
-
+            {
                 printf("MAXIMUM TENTATIVES REACHED! (Close - Transmitter)\n");
                 return -1;
                 break;
+            }
 
             case 2:
-
+            {
                 unsigned char byte;
                 int nbyte = readByteSerialPort(&byte);
                 if (nbyte == -1)
@@ -422,7 +441,7 @@ int llclose(int showStatistics)
                             unsigned char responseFrame[5] = {FLAG, AR, UA, AR ^ UA, FLAG};
                             if (fullWrite(responseFrame, 5) == -1)
                             {
-                            printf("Error Sending UA (Close - Transmitter)\n");
+                                printf("Error Sending UA (Close - Transmitter)\n");
                                 return -1;
                             }
                             STOP = TRUE;
@@ -431,10 +450,9 @@ int llclose(int showStatistics)
                             if (showStatistics)
                             {
                                 printf("-- STATISTICS --\n");
-                                printf("Frames : %d\n", frameCount);
-                                printf("Retransmitions : %d\n", retransmitionCount);
-                                printf("Timeouts : %d\n", timeoutCount);
-                                printf("Rejected frames : %d\n", rejectedCount);
+                                printf("Number of Frames Sent: %d\n", statsData.frameCount);
+                                printf("Number of Timeouts: %d\n", statsData.timeoutCount);
+                                printf("Number of Rejected Frames: %d\n", statsData.rejectedCount);
                             }
                         }
                         cleanMachineData();
@@ -442,14 +460,17 @@ int llclose(int showStatistics)
                 }
                 break;
             }
+            }
             break;
+        }
         }
     }
     // Closes file
     fclose(file);
     // Closes Serial Port
     int clstat = closeSerialPort();
-    if(clstat == -1){
+    if (clstat == -1)
+    {
         printf("Unable to close Serial Port (Link Layer)\n");
     }
     return clstat;

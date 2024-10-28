@@ -37,9 +37,9 @@ unsigned char isInfoRepeated();
 
 unsigned char* getMachineData();
 
-unsigned int getMachineDataSize();
+int getMachineDataSize();
 
-unsigned int getFrameNum();
+int getFrameNum();
 
 void cleanMachineData();
 

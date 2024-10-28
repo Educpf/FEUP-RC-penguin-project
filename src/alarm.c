@@ -1,8 +1,7 @@
-// Alarm example
-//
-// Modified by: Eduardo Nuno Almeida [enalmeida@fe.up.pt]
+
 #include "alarm.h"
 #include "macros.h"
+#include "utils.h"
 
 #include <unistd.h>
 #include <signal.h>
@@ -15,18 +14,20 @@
 
 int alarmEnabled = FALSE;
 int alarmCount = 0;
+extern Statistics statsData;
 
 // Alarm function handler
 void alarmHandler(int signal)
 {
     alarmEnabled = FALSE;
     alarmCount++;
+    statsData.timeoutCount++;
 
     printf("Alarm #%d\n", alarmCount);
 }
 
 // 0 -> alarm set up
-// 1 -> alarm not set because of 
+// 1 -> alarm not set because of HHHHHHHHHHH
 // 2 -> already enabled
 int setupAlarm(int maximumRetransmitions, int timeout)
 {
@@ -40,7 +41,7 @@ int setupAlarm(int maximumRetransmitions, int timeout)
     printf("Alarm set\n");
     (void)signal(SIGALRM, alarmHandler);
     alarmEnabled = TRUE;
-    alarm(timeout);
+    alarm((unsigned int)timeout);
     return 0;
 }
 
@@ -53,24 +54,3 @@ void turnOffAlarm()
     alarmEnabled = FALSE;
     alarmCount = 0;
 }
-
-
-// int main()
-// {
-//     // Set alarm function handler
-//     (void)signal(SIGALRM, alarmHandler);
-
-//     while (alarmCount < 4)
-//     {
-//         if (alarmEnabled == FALSE)
-//         {
-//             alarm(3); // Set alarm to be triggered in 3s
-//             alarmEnabled = TRUE;
-//         }
-//         
-//     }
-
-//     printf("Ending program\n");
-
-//     return 0;
-// }

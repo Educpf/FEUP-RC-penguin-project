@@ -27,29 +27,32 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     unsigned char packet[MAX_PAYLOAD_SIZE];
+    unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
+    FILE *outputFile;
+    FILE *outputPackets;
+    FILE *inputFile;
+    FILE *packetT;
+    int fileSizeReceivedStart = 0;
+    int STOP = FALSE;
+
     switch (actualRole)
     {
-
     case LlRx:
     {
         // Opens Files
-        FILE *outputFile = fopen(filename, "w");
+        outputFile = fopen(filename, "w");
         if (outputFile == NULL)
         {
             perror("Error opening output file");
         }
 
-        FILE *outputPackets = fopen("PacketsReceiver.txt", "w");
+        outputPackets = fopen("PacketsReceiver.txt", "w");
         if (outputPackets == NULL)
         {
             perror("Error opening PacketsReceiver file");
         }
 
-        unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
-        int fileSizeReceivedStart = 0;
-
         // Reading and handle packets
-        int STOP = FALSE;
         while (STOP == FALSE)
         {
 
@@ -80,8 +83,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         printf("%x-",packet[l]);
                     }
                     // Store filename and file size to compare in the end
-                    // TODO - CAST LENGHT TO INT ???
-                    // CREATE FUNCTION TO GET STUFF?? OU seja, tirar loop?  Tipo, não acontece. Mas se quiseres mudar no transmitter nao precisas
                     int i = 1;  
                     while (i < nbytes)
                     {
@@ -187,13 +188,13 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     case LlTx:
     {
         // Opens Files
-        FILE *inputFile = fopen(filename, "rb");
+        inputFile = fopen(filename, "rb");
         if (inputFile == NULL)
         {
             perror("Error opening input file");
         }
 
-        FILE *packetT = fopen("PacketsTransmitter.txt", "w");
+        packetT = fopen("PacketsTransmitter.txt", "w");
         if (packetT == NULL)
         {
             perror("Error opening PacketsTransmitter file");
@@ -205,8 +206,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         fseek(inputFile, 0, SEEK_SET);
 
 
-
-        // TODO - FIX NUMBERS
         // CONTROL PACKET (Start)
         packet[0] = 1;
 
@@ -253,7 +252,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         }
 
 
-        // TODO  - FIX NUMBERS
         // CONTROL PACKET (END)
         packet[0] = 3;
 

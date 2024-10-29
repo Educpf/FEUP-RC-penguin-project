@@ -34,7 +34,7 @@ int llopen(LinkLayer connectionParameters)
     statsConstructor(&stats);
 
     // Opens file to store data to better understand errors
-    file = fopen("output.txt", "w"); // change name ahabsknqifbnefc
+    file = fopen("ReaderLog.txt", "w");
     if (file == NULL)
     {
         perror("Error opening file");
@@ -64,7 +64,7 @@ int llopen(LinkLayer connectionParameters)
                 if (handleByte(byte) == END)
                 {
                     printf("Reached the end\n");
-                    //stats.frameCount++;
+                    stats.frameCount++;
                     // SET Frame Received
                     if (getControlByte() == SET)
                     {
@@ -75,15 +75,22 @@ int llopen(LinkLayer connectionParameters)
                             printf("Error Sending UA (Open - Receiver)\n");
                             return -1;
                         }
-                        //stats.approvedCount++;
+                        stats.approvedCount++;
+                        cleanMachineData();
                     }
                     // Information Frame Received! Connection is finished
-                    if (isInfoControl(getControlByte()))
+                    else if (isInfoControl(getControlByte()))
+                    {
+                        stats.frameCount--;
                         STOP = TRUE;
+                    }
 
                     // RESET MACHINE STATE AND CLEAR DATA IF RECEIVED SET FRAME
                     else
+                    {
+                        stats.strangeCount++;
                         cleanMachineData();
+                    }
                 }
             }
             break;
@@ -102,6 +109,7 @@ int llopen(LinkLayer connectionParameters)
                     printf("Error Sending SET (Open - Transmitter)\n");
                     return -1;
                 }
+                stats.frameCount++;
                 break;
             }
 
@@ -137,6 +145,10 @@ int llopen(LinkLayer connectionParameters)
                             printf("Machines Connected!!\n");
                             STOP = TRUE;
                             cleanMachineData();
+                        }
+                        else
+                        {
+                            stats.strangeCount++;
                         }
                     }
                 }
@@ -226,7 +238,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                     if (isRejectionByte(getControlByte()))
                         stats.rejectedCount++;
                     // GOOD INFORMATION RESPONSE
-                    if (isReadyToReceiveByte(getControlByte()))
+                    else if (isReadyToReceiveByte(getControlByte()))
                     {
                         int requestedFrame = (int)receiveToSendControlByte(getControlByte());
                         // Assures that requested frame is really the supposed to send
@@ -235,6 +247,10 @@ int llwrite(const unsigned char *buf, int bufSize)
                             STOP = TRUE;
                             invertFrameNum();
                         }
+                    }
+                    else
+                    {
+                        stats.strangeCount++;
                     }
                     cleanMachineData();
                 }
@@ -269,6 +285,10 @@ int llread(unsigned char *packet)
                 {
                     return bytesRead;
                 }
+            }
+            else
+            {
+                stats.strangeCount++;
             }
             cleanMachineData();
         }
@@ -323,10 +343,14 @@ int llclose(int showStatistics)
                     // End of frame reached
                     if (handleByte(byte) == END)
                     {
+                        stats.frameCount++;
                         // Receives DISC
                         if (getControlByte() == DISC)
                         {
                             disc = 1;
+                        }
+                        else{
+                            stats.strangeCount++;
                         }
                         cleanMachineData();
                     }
@@ -347,6 +371,7 @@ int llclose(int showStatistics)
                         printf("Error Sending DISC (Close - Receiver)\n");
                         return -1;
                     }
+                    stats.approvedCount++;
                     break;
                 }
 
@@ -371,6 +396,7 @@ int llclose(int showStatistics)
                         // End of frame reached
                         if (handleByte(byte) == END)
                         {
+                            stats.frameCount++;
                             turnOffAlarm();
                             // Received UA -> Ends Progrma
                             if (getControlByte() == UA)
@@ -385,7 +411,12 @@ int llclose(int showStatistics)
                                     printf("Number of Approved Frames: %d\n", stats.approvedCount);
                                     printf("Number of Rejected Frames: %d\n", stats.rejectedCount);
                                     printf("Number of Repeated Frames: %d\n", stats.repeatedCount);
+                                    printf("Number of Strange Frames: %d\n", stats.strangeCount);
                                 }
+                            }
+                            else
+                            {
+                                stats.strangeCount++;
                             }
                             cleanMachineData();
                         }
@@ -411,6 +442,7 @@ int llclose(int showStatistics)
                     printf("Error Sending DISC (Close - Transmitter)\n");
                     return -1;
                 }
+                stats.frameCount++;
                 break;
             }
 
@@ -445,6 +477,7 @@ int llclose(int showStatistics)
                                 printf("Error Sending UA (Close - Transmitter)\n");
                                 return -1;
                             }
+                            stats.frameCount++;
                             STOP = TRUE;
 
                             // Show Statistics
@@ -454,7 +487,11 @@ int llclose(int showStatistics)
                                 printf("Number of Frames Sent: %d\n", stats.frameCount);
                                 printf("Number of Timeouts: %d\n", stats.timeoutCount);
                                 printf("Number of Rejected Frames: %d\n", stats.rejectedCount);
+                                printf("Number of Strange Frames: %d\n", stats.strangeCount);
                             }
+                        }
+                        else{
+                            stats.strangeCount++;
                         }
                         cleanMachineData();
                     }

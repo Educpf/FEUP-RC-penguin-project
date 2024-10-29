@@ -16,7 +16,6 @@ int alarmEnabled = FALSE;
 int alarmCount = 0;
 extern Statistics stats;
 
-// Alarm function handler
 void alarmHandler(int signal)
 {
     alarmEnabled = FALSE;
@@ -44,8 +43,6 @@ int setupAlarm(int maximumRetransmitions, int timeout)
     alarm((unsigned int)timeout);
     return 0;
 }
-
-int getAlarmState() { return alarmEnabled; }
 
 void turnOffAlarm()
 {

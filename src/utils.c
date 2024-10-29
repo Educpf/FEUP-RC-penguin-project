@@ -125,4 +125,5 @@ void statsConstructor(Statistics* stats){
     stats->rejectedCount = 0;
     stats->approvedCount = 0;
     stats->repeatedCount = 0;
+    stats->strangeCount = 0;
 }

@@ -25,9 +25,7 @@ void alarmHandler(int signal)
     printf("Alarm #%d\n", alarmCount);
 }
 
-// 0 -> alarm set up
-// 1 -> alarm not set because of HHHHHHHHHHH
-// 2 -> already enabled
+
 int setupAlarm(int maximumRetransmitions, int timeout)
 {
     if (alarmCount > maximumRetransmitions)
@@ -43,6 +41,7 @@ int setupAlarm(int maximumRetransmitions, int timeout)
     alarm((unsigned int)timeout);
     return 0;
 }
+
 
 void turnOffAlarm()
 {

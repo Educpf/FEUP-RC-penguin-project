@@ -25,12 +25,14 @@ typedef struct stateMachine
 
 
 
-
+// Processes byte 
+// Returns the state of the machine
 enum machineStates handleByte(unsigned char byte);
 
-
+// Returns the current stateMachine State
 enum machineStates getMachineState();
 
+// Returns the controlByte received 
 enum machineStates getControlByte();
 
 unsigned char isInfoRepeated();

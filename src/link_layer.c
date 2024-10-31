@@ -33,7 +33,8 @@ int llopen(LinkLayer connectionParameters)
 
     statsConstructor(&stats);
 
-    // Opens file to store data to better understand errors
+
+    // Open file to store data to better understand errors
     file = fopen("ReaderLog.txt", "w");
     if (file == NULL)
     {
@@ -55,15 +56,12 @@ int llopen(LinkLayer connectionParameters)
                 printf("Error when reading from Serial Port (Open - Receiver)\n");
                 return -1;
             }
-            if (nbytes)
+            else if (nbytes)
             {
-                printf("New byte:  %x\n", byte);
-                printf("The current state -> %d", getMachineState());
 
                 // End of frame reached
                 if (handleByte(byte) == END)
                 {
-                    printf("Reached the end\n");
                     stats.frameCount++;
                     // SET Frame Received
                     if (getControlByte() == SET)
@@ -75,6 +73,7 @@ int llopen(LinkLayer connectionParameters)
                             printf("Error Sending UA (Open - Receiver)\n");
                             return -1;
                         }
+
                         stats.approvedCount++;
                         cleanMachineData();
                     }
@@ -84,7 +83,6 @@ int llopen(LinkLayer connectionParameters)
                         stats.frameCount--;
                         STOP = TRUE;
                     }
-
                     // RESET MACHINE STATE AND CLEAR DATA IF RECEIVED SET FRAME
                     else
                     {
@@ -112,7 +110,6 @@ int llopen(LinkLayer connectionParameters)
                 stats.frameCount++;
                 break;
             }
-
             case 1:
             {
                 printf("MAXIMUM TENTATIVES REACHED! (Open - Transmitter)\n");
@@ -121,7 +118,7 @@ int llopen(LinkLayer connectionParameters)
             }
             case 2:
             {
-                // Waits response to SET
+                // Waits UA Response
                 unsigned char byte;
                 int nbyte = readByteSerialPort(&byte);
                 if (nbyte == -1)
@@ -129,11 +126,8 @@ int llopen(LinkLayer connectionParameters)
                     printf("Error when reading from Serial Port (Open - Transmitter)\n");
                     return -1;
                 }
-                if (nbyte)
+                else if (nbyte)
                 {
-                    printf("Processing a byte\n");
-                    printf("The state: %d\n", getMachineState());
-                    printf("The byte: %x\n", byte);
 
                     // End of frame reached
                     if (handleByte(byte) == END)
@@ -174,16 +168,16 @@ int llwrite(const unsigned char *buf, int bufSize)
     unsigned char bcc = 0;
     int byteNum = 4;
 
-    // Iterates through buffer and stores stuffed bytes in dataFrame
+    // Iterate through buffer and store stuffed bytes in dataFrame
     for (int i = 0; i < bufSize; i++)
     {
         unsigned char transferByte = buf[i];
         bcc ^= transferByte;
-        // Applies byte stuffing
+        // Apply byte stuffing
         byteNum += addByteWithStuff(transferByte, dataFrame + byteNum) + 1;
     }
 
-    // Applies byte stuffing to BCC2
+    // Apply byte stuffing to BCC2
     byteNum += addByteWithStuff(bcc, dataFrame + byteNum) + 1;
     dataFrame[byteNum++] = FLAG;
 
@@ -225,7 +219,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 printf("Error when reading from Serial Port (Link Layer - Write)\n");
                 return -1;
             }
-            if (nbyte)
+            else if (nbyte)
             {
                 printf("Processing a byte\n");
                 printf("The state: %d\n", getMachineState());
@@ -236,12 +230,15 @@ int llwrite(const unsigned char *buf, int bufSize)
                 {
                     turnOffAlarm();
                     if (isRejectionByte(getControlByte()))
+                    {
                         stats.rejectedCount++;
-                    // GOOD INFORMATION RESPONSE
+
+                    }  // GOOD INFORMATION RESPONSE
                     else if (isReadyToReceiveByte(getControlByte()))
                     {
                         int requestedFrame = (int)receiveToSendControlByte(getControlByte());
-                        // Assures that requested frame is really the supposed to send
+
+                        // Assure that requested frame is really the supposed to send
                         if (requestedFrame != getFrameNum())
                         {
                             STOP = TRUE;
@@ -294,7 +291,7 @@ int llread(unsigned char *packet)
         }
         else
         {
-            // Reads and handles byte from Serial Port
+            // Read and handle bytes from Serial Port
             unsigned char byte;
             int nbytes = readByteSerialPort(&byte);
             if (nbytes == -1)
@@ -302,7 +299,7 @@ int llread(unsigned char *packet)
                 printf("Error when reading from Serial Port (Link Layer - Read)\n");
                 return -1;
             }
-            if (nbytes)
+            else if (nbytes)
             {
                 // Writes to file in order to better understand errors
                 fprintf(file, "New byte:  %x\n", byte);
@@ -314,6 +311,7 @@ int llread(unsigned char *packet)
     }
     return -1; // Acho que sim
 }
+
 
 int llclose(int showStatistics)
 {
@@ -384,7 +382,7 @@ int llclose(int showStatistics)
                 }
                 case 2:
                 {
-                    // Waits UA from Transmitter
+                    // Wait UA from Transmitter
                     unsigned char byte;
                     int nbyte = readByteSerialPort(&byte);
                     if (nbyte == -1)
@@ -392,7 +390,7 @@ int llclose(int showStatistics)
                         printf("Error when reading from Serial Port (Close - Receiver(UA))\n");
                         return -1;
                     }
-                    if (nbyte)
+                    else if (nbyte)
                     {
                         // End of frame reached
                         if (handleByte(byte) == END)
@@ -435,9 +433,10 @@ int llclose(int showStatistics)
             {
 
             case 0:
-            { // Sends DISC Frame to Receiver
+            { 
+                // Send DISC Frame to Receiver
                 unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
-                printf("SENDING DISC FROM TRANSM");
+                printf("SENDING DISC FROM TRANSMITTER");
                 if (fullWrite(discFrame, 5) == -1)
                 {
                     printf("Error Sending DISC (Close - Transmitter)\n");
@@ -463,12 +462,13 @@ int llclose(int showStatistics)
                     printf("Error when reading from Serial Port (Close - Transmitter)\n");
                     return -1;
                 }
-                if (nbyte)
+                else if (nbyte)
                 {
                     // End of frame reached
                     if (handleByte(byte) == END)
                     {
                         turnOffAlarm();
+
                         // DISC Received Sends UA
                         if (getControlByte() == DISC)
                         {
@@ -504,9 +504,10 @@ int llclose(int showStatistics)
         }
         }
     }
-    // Closes file
+
+    // Close file
     fclose(file);
-    // Closes Serial Port
+    // Close Serial Port
     int clstat = closeSerialPort();
     if (clstat == -1)
     {

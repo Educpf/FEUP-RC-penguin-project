@@ -37,7 +37,7 @@ int processInformationFrame(unsigned char *packet)
         unsigned char Bcc2 = getMachineData()[datasize - 1];
         unsigned char calculatedBcc = 0;
 
-        // Calculates BCC2
+        // Calculate BCC2
         for (int i = 0; i < datasize-1; i++){
             calculatedBcc ^= getMachineData()[i];
         }
@@ -46,7 +46,7 @@ int processInformationFrame(unsigned char *packet)
         if (calculatedBcc != Bcc2)
         {
             fprintf(file,"ERROR in BCC2\n");
-            // Sends REJ Frame
+            // Send REJ Frame
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
             if (fullWrite(response, 5) == -1)
@@ -55,6 +55,7 @@ int processInformationFrame(unsigned char *packet)
                 return -1;
             }
             stats.rejectedCount++;
+            // Ignore controlByte read
             invertControlByte();
             cleanMachineData();
         }
@@ -77,7 +78,7 @@ int processInformationFrame(unsigned char *packet)
     }
     else
     {   
-        // Sends RR Frame (case info repeated)
+        // Sends RR Frame
         fprintf(file,"Asking for next data frame(REPEATED)\n");
         unsigned char C = RR0 + (getControlByte() == C_INFO_0);
         unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
@@ -95,8 +96,6 @@ int processInformationFrame(unsigned char *packet)
 
 
 
-// 0 -> not stuffed  HHHHHHHHHHHHHh
-// 1 -> stuffed
 int addByteWithStuff(unsigned char byte, unsigned char *buf)
 {
     // Stuffing FLAG byte -> ESC (FLAG^0x20)

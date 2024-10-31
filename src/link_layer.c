@@ -377,6 +377,7 @@ int llclose(int showStatistics)
 
                 case 1:
                 {
+                    printf("Receiver couldn't receive UA");
                     printf("MAXIMUM TENTATIVES REACHED! (Close - Receiver)\n");
                     return -1;
                     break;

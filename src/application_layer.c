@@ -7,6 +7,11 @@
 
 #define MAX_SEQUENCE_NUMBER 99
 
+
+int fileSizeReceivedStart = 0;
+unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
+
+
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
@@ -27,12 +32,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     unsigned char packet[MAX_PAYLOAD_SIZE];
-    unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
     FILE *outputFile;
     FILE *outputPackets;
     FILE *inputFile;
     FILE *packetT;
-    int fileSizeReceivedStart = 0;
+
     int STOP = FALSE;
 
     switch (actualRole)

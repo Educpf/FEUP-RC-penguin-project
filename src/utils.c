@@ -7,7 +7,7 @@
 
 extern FILE* file;
 extern Statistics stats;
-//HHHHHHHHHHHHHHH
+
 int fullWrite(unsigned char *data, int nBytes)
 {
     int nBytesWritten = 0;
@@ -26,8 +26,6 @@ int fullWrite(unsigned char *data, int nBytes)
     return 0;
 }
 
-// -1 -> error
-// n -> bytes written to packet      HHHHHHHHHHHHHHHHHHHHH
 int processInformationFrame(unsigned char *packet)
 {
     // If Repeated does not calculate again
@@ -54,6 +52,7 @@ int processInformationFrame(unsigned char *packet)
                 printf("Error Sending REJ Frame (Link Layer - Read)\n");
                 return -1;
             }
+            printf("Frame Rejected\n");
             stats.rejectedCount++;
             // Ignore controlByte read
             invertControlByte();
@@ -71,6 +70,7 @@ int processInformationFrame(unsigned char *packet)
                 printf("Error Sending RR Frame (Link Layer - Read)\n");
                 return -1;
             }
+            printf("Frame Accepted\n");
             stats.approvedCount++;
             cleanMachineData();
             return (datasize - 1);
@@ -78,7 +78,7 @@ int processInformationFrame(unsigned char *packet)
     }
     else
     {   
-        // Sends RR Frame
+        // Sends RR Frame(Case Repeated)
         fprintf(file,"Asking for next data frame(REPEATED)\n");
         unsigned char C = RR0 + (getControlByte() == C_INFO_0);
         unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
@@ -87,6 +87,7 @@ int processInformationFrame(unsigned char *packet)
             printf("Error Sending RR Frame - Repeated (Link Layer - Read)\n");
             return -1;
         }
+        printf("Frame Repeated\n");
         stats.repeatedCount++;
         cleanMachineData();
 

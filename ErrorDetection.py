@@ -9,9 +9,10 @@ receiverPackets = list(map(lambda p: p.split(" ")[2:], filter(lambda p: p != "",
 
 transmitterPackets = list(map(lambda p: p.split(" ")[2:], filter(lambda p: p != "",transmitter.split("\n"))))
 
-print(f"Receiver Total Packets: {len(receiverPackets)}")
-print(f"Transmitter Total Packets: {len(transmitterPackets)}")
 
+print(f"Receiver Total Packets: {len(receiverPackets)}")
+print(f"Transmitter Total Packets: {len(transmitterPackets)}\n")
+print("Errors Detected \n[Byte Number]:(ByteReceived, ByteSent)\n")
 for ip in range(len(receiverPackets)):
     packetR = receiverPackets[ip]
     packetT = transmitterPackets[ip]

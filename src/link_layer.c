@@ -66,13 +66,13 @@ int llopen(LinkLayer connectionParameters)
                     // SET Frame Received
                     if (getControlByte() == SET)
                     {
-                        printf("Found set frame!\n");
                         unsigned char response[5] = {FLAG, AS, UA, AS ^ UA, FLAG};
                         if (fullWrite(response, 5) == -1)
                         {
                             printf("Error Sending UA (Open - Receiver)\n");
                             return -1;
                         }
+                        printf("SET Frame Received - Sending UA Frame\n");
 
                         stats.approvedCount++;
                         cleanMachineData();
@@ -107,6 +107,7 @@ int llopen(LinkLayer connectionParameters)
                     printf("Error Sending SET (Open - Transmitter)\n");
                     return -1;
                 }
+                printf("Sending SET Frame\n");
                 stats.frameCount++;
                 break;
             }
@@ -136,6 +137,7 @@ int llopen(LinkLayer connectionParameters)
                         if (getControlByte() == UA)
                         {
                             turnOffAlarm();
+                            printf("UA Frame Received\n");
                             printf("Machines Connected!!\n");
                             STOP = TRUE;
                             cleanMachineData();
@@ -181,10 +183,6 @@ int llwrite(const unsigned char *buf, int bufSize)
     byteNum += addByteWithStuff(bcc, dataFrame + byteNum) + 1;
     dataFrame[byteNum++] = FLAG;
 
-    for (int i = 0; i < byteNum; i++)
-    {
-        printf("%x - ", dataFrame[i]);
-    }
 
     int STOP = FALSE;
     while (STOP == FALSE)
@@ -200,6 +198,7 @@ int llwrite(const unsigned char *buf, int bufSize)
                 printf("Error Sending Information Frame (Link Layer - Write)\n");
                 return -1;
             }
+            printf("Sending Data Frame(%d bytes)\n",byteNum);
             stats.frameCount++;
             break;
         }
@@ -221,10 +220,6 @@ int llwrite(const unsigned char *buf, int bufSize)
             }
             else if (nbyte)
             {
-                printf("Processing a byte\n");
-                printf("The state: %d\n", getMachineState());
-                printf("The byte: %x\n", byte);
-
                 // End of frame reached
                 if (handleByte(byte) == END)
                 {
@@ -309,7 +304,7 @@ int llread(unsigned char *packet)
             }
         }
     }
-    return -1; // Acho que sim
+    return -1;
 }
 
 
@@ -323,7 +318,8 @@ int llclose(int showStatistics)
         {
 
         case (LlRx):
-        { // Waiting DISC from Transmitter
+        { 
+            // Waiting DISC from Transmitter
             if (disc == 0)
             {
                 unsigned char byte;
@@ -335,9 +331,6 @@ int llclose(int showStatistics)
                 }
                 if (nbyte)
                 {
-                    printf("New byte:  %x\n", byte);
-                    printf("The current state -> %d\n", getMachineState());
-
                     // End of frame reached
                     if (handleByte(byte) == END)
                     {
@@ -363,12 +356,12 @@ int llclose(int showStatistics)
                 {
                     // Sends DISC Frame to Transmitter
                     unsigned char discFrame[5] = {FLAG, AR, DISC, AR ^ DISC, FLAG};
-                    printf("SENDING DISC FROM RECEIVER");
                     if (fullWrite(discFrame, 5) == -1)
                     {
                         printf("Error Sending DISC (Close - Receiver)\n");
                         return -1;
                     }
+                    printf("DISC Frame Received - Sending DISC Frame\n");
                     stats.approvedCount++;
                     break;
                 }
@@ -401,6 +394,8 @@ int llclose(int showStatistics)
                             if (getControlByte() == UA)
                             {
                                 STOP = TRUE;
+                                printf("UA Frame Received\n");
+                                printf("TERMINATING...\n");
                                 // Show Statistics
                                 if (showStatistics)
                                 {
@@ -436,12 +431,12 @@ int llclose(int showStatistics)
             { 
                 // Send DISC Frame to Receiver
                 unsigned char discFrame[5] = {FLAG, AS, DISC, AS ^ DISC, FLAG};
-                printf("SENDING DISC FROM TRANSMITTER");
                 if (fullWrite(discFrame, 5) == -1)
                 {
                     printf("Error Sending DISC (Close - Transmitter)\n");
                     return -1;
                 }
+                printf("Sending DISC Frame\n");
                 stats.frameCount++;
                 break;
             }
@@ -478,6 +473,7 @@ int llclose(int showStatistics)
                                 printf("Error Sending UA (Close - Transmitter)\n");
                                 return -1;
                             }
+                            printf("DISC Frame Received - Sending UA Frame\n");
                             stats.frameCount++;
                             STOP = TRUE;
 

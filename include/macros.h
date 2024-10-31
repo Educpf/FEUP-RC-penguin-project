@@ -21,17 +21,12 @@
 
 #define DISC 0x0B
 
-#define isFlag(x) 
 #define isInfoControl(x) (x == C_INFO_0 || x == C_INFO_1)
 #define isRejectionByte(x) (x == REJ0 || x == REJ1)
 #define isReadyToReceiveByte(x) (x == RR0 || x == RR1)
 
 
 #define receiveToSendControlByte(x) ( C_INFO_1 *  (x - RR0) )
-
-
-#define BUF_SIZE 256
-#define CHUNK_SIZE 40
 
 
 

@@ -98,7 +98,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         {
                             memcpy(filenameReceivedStart, packet + i, length);
                             filenameReceivedStart[length] = '\0';
-                            printf("filename(start):%s",filenameReceivedStart);
                             i += (int)length;
                         }
                     }
@@ -117,7 +116,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     if ((bytesWritten = (int)fwrite(packet + 4, 1,(size_t)k, outputFile)) < k)
                     {
                         printf("Error writing to file in Sequence Number: %u\n", sequenceNumber);
-                        printf("[Expectations/Reality] %d/%d\n", k, bytesWritten);
+                        return;
                     }
 
                     // Writing to file PacketsReceiver in order to better understand errors
@@ -150,7 +149,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                         {
                             memcpy(filenameReceivedEnd, packet + j, length);
                             filenameReceivedEnd[length] = '\0';
-                            printf("filename(end):%s",filenameReceivedEnd);
                             j += (int)length;
                         }
                     }
@@ -189,7 +187,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     case LlTx:
     {
-        // Opens Files
+        // Open Files
         inputFile = fopen(filename, "rb");
         if (inputFile == NULL)
         {
@@ -221,14 +219,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         packet[12] = (unsigned char)strlen(filename)+1;
         memcpy(packet + 13, filename, packet[12]);
 
-        printf("Sending packet of %d bytes\n", packet[2] + packet[12] + 5);
         if (llwrite(packet, packet[2] + packet[12] + 5) == -1)
         {
             printf("Error when writting (Application Layer - Transmitter - Control Packet 1)\n");
             return;
         }
-
-
 
 
         // DATA PACKETS
@@ -238,7 +233,6 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         int bytesRead = 0;
         while ((bytesRead = (int)fread(packet + 4, 1, (size_t)(MAX_PAYLOAD_SIZE - 4), inputFile)) > 0)
         {
-            printf("Sending packet of %d bytes\n", bytesRead);
             packet[1] = (unsigned char)(currentSequenceNumber++ % (MAX_SEQUENCE_NUMBER + 1)); // Assure sequence number between 0-99
             packet[2] = (unsigned char)(bytesRead / 256);
             packet[3] = (unsigned char)(bytesRead % 256);
@@ -260,8 +254,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         // CONTROL PACKET (END)
         packet[0] = 3;
 
-        // File Size                    printf("Filename different in control packet start and control packet end");
-                    return;
+        // File Size                  
         packet[1] = 0;
         packet[2] = sizeof(fileSize);
         memcpy(packet + 3, &fileSize, packet[2]);

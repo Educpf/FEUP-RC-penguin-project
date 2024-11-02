@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-extern FILE* file;
 extern Statistics stats;
 
 int fullWrite(unsigned char *data, int nBytes)
@@ -43,7 +42,6 @@ int processInformationFrame(unsigned char *packet)
         // Checks if has error in BCC2
         if (calculatedBcc != Bcc2)
         {
-            fprintf(file,"ERROR in BCC2\n");
             // Send REJ Frame
             unsigned char C = REJ0 + (getControlByte() == C_INFO_1);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
@@ -62,7 +60,6 @@ int processInformationFrame(unsigned char *packet)
         {
             memcpy(packet, getMachineData(), (size_t)(datasize - 1));
             // Sends RR Frame
-            fprintf(file,"Asking for next data frame(OKOKOKOK)\n");
             unsigned char C = RR0 + (getControlByte() == C_INFO_0);
             unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
             if (fullWrite(response, 5) == -1)
@@ -79,7 +76,6 @@ int processInformationFrame(unsigned char *packet)
     else
     {   
         // Sends RR Frame(Case Repeated)
-        fprintf(file,"Asking for next data frame(REPEATED)\n");
         unsigned char C = RR0 + (getControlByte() == C_INFO_0);
         unsigned char response[5] = {FLAG, AS, C, AS ^ C, FLAG};
         if (fullWrite(response, 5) == -1)

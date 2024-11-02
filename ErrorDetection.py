@@ -37,24 +37,27 @@ for ip in range(len(receiverPackets)):
     if errors != "":
         count += 1
         print()
-        print(f"PACKET N: {ip}")
+        print(f"PACKET N: {ip+1}")
+        print(f"BCC Received: 0x{int(receiverBccInBuf[ip], 16):x} \nBCC Transmitted: 0x{int(transmitterBcc[ip], 16):x}\n")
         print(errors)
         resultReceived = 0
         for v in received:
             print(v, end="^")
             resultReceived = resultReceived ^ int(v, 16)
-        print(f"\b={resultReceived:x}")
+        print(f"\b=0x{resultReceived:x}")
         resultSended = 0
         for v in sended:
             print(v, end="^")
             resultSended = resultSended ^ int(v, 16)
-        print(f"\b={resultSended:x}")
-        print(f"BCC Receiver BUF: {receiverBccInBuf[ip]} ---- BCC Receiver CALC: {receiverBccCalc[ip]} ---- BCC Transmitter: {transmitterBcc[ip]}")
+        print(f"\b=0x{resultSended:x}")
         if (resultSended == resultReceived):
             print("Result of xor is the same although bytes are different!")
             print("Difference in penguin results in the Bcc method not being robust enough...")
         else:
             print("Some error actually occured. Xor is different...")
+            if (receiverBccInBuf[ip] == transmitterBcc[ip]):
+                print("BCCs are different. The error in the frame affected the BCC and the values.")
+                print("That explains the difference between frames and the error not being detected...")
 
 
 if count == 0:

@@ -16,6 +16,9 @@ static LinkLayerRole role;
 
 Statistics stats;
 
+extern FILE *outputPackets;
+extern FILE *packetT;
+
 int llopen(LinkLayer connectionParameters)
 {
 
@@ -176,6 +179,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     byteNum += addByteWithStuff(bcc, dataFrame + byteNum) + 1;
     dataFrame[byteNum++] = FLAG;
 
+    fprintf(packetT,"\n\n%x ",bcc);
 
     int STOP = FALSE;
     while (STOP == FALSE)

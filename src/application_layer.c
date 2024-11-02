@@ -11,6 +11,8 @@
 // Global variables because of old compiler
 int fileSizeReceivedStart = 0;
 unsigned char filenameReceivedStart[MAX_PAYLOAD_SIZE];
+FILE *outputPackets;
+FILE *packetT;
 
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
@@ -36,9 +38,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     unsigned char packet[MAX_PAYLOAD_SIZE];
     FILE *outputFile;
-    FILE *outputPackets;
     FILE *inputFile;
-    FILE *packetT;
 
 
     int STOP = FALSE;
@@ -122,7 +122,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                     }
 
                     // Writing to file PacketsReceiver in order to better understand errors
-                    fprintf(outputPackets, "\n\nPACKET %d: ", packet[1]);
+                    fprintf(outputPackets, "PACKET %d: ", packet[1]);
                     for (int d = 4; d < k + 4; d++)
                     {
                         fprintf(outputPackets, "%x ", packet[d]);
@@ -247,7 +247,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
             }
 
             // Writing to file PacketsTransmitter in order to better understand errors
-            fprintf(packetT, "\n\nPACKET %d: ", packet[1]);
+            fprintf(packetT, "PACKET %d: ", packet[1]);
             for (int i = 4; i < bytesRead + 4; i++)
             {
                 fprintf(packetT, "%x ", packet[i]);

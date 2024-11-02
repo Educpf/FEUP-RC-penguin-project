@@ -5,9 +5,16 @@ with open("PacketsTransmitter.txt", 'r') as file:
     transmitter = file.read()
 
 
-receiverPackets = list(map(lambda p: p.split(" ")[2:], filter(lambda p: p != "",receiver.split("\n"))))
+receiverPackets = list(map(lambda p: p.split(" ")[4:], filter(lambda p: p != "" and len(p) > 6,receiver.split("\n"))))
+receiverBccInBuf = list(map(lambda p: p.split(" ")[0], filter(lambda p: p != "" and len(p) > 6,receiver.split("\n"))))
+receiverBccCalc = list(map(lambda p: p.split(" ")[1], filter(lambda p: p != "" and len(p) > 6,receiver.split("\n"))))
 
-transmitterPackets = list(map(lambda p: p.split(" ")[2:], filter(lambda p: p != "",transmitter.split("\n"))))
+
+
+transmitterPackets = list(map(lambda p: p.split(" ")[3:], filter(lambda p: p != "" and len(p) > 3, transmitter.split("\n"))))
+transmitterBcc = list(map(lambda p: p.split(" ")[0], filter(lambda p: p != "" and len(p) > 3, transmitter.split("\n"))))
+
+
 
 
 print(f"Receiver Total Packets: {len(receiverPackets)}")
@@ -42,6 +49,7 @@ for ip in range(len(receiverPackets)):
             print(v, end="^")
             resultSended = resultSended ^ int(v, 16)
         print(f"\b={resultSended:x}")
+        print(f"BCC Receiver BUF: {receiverBccInBuf[ip]} ---- BCC Receiver CALC: {receiverBccCalc[ip]} ---- BCC Transmitter: {transmitterBcc[ip]}")
         if (resultSended == resultReceived):
             print("Result of xor is the same although bytes are different!")
             print("Difference in penguin results in the Bcc method not being robust enough...")

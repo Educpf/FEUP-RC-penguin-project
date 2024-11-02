@@ -7,6 +7,8 @@
 
 extern Statistics stats;
 
+extern FILE *outputPackets;
+
 int fullWrite(unsigned char *data, int nBytes)
 {
     int nBytesWritten = 0;
@@ -33,6 +35,7 @@ int processInformationFrame(unsigned char *packet)
         int datasize = getMachineDataSize();
         unsigned char Bcc2 = getMachineData()[datasize - 1];
         unsigned char calculatedBcc = 0;
+        fprintf(outputPackets, "\n\n%x ", Bcc2);
 
         // Calculate BCC2
         for (int i = 0; i < datasize-1; i++){
@@ -67,6 +70,7 @@ int processInformationFrame(unsigned char *packet)
                 printf("Error Sending RR Frame (Link Layer - Read)\n");
                 return -1;
             }
+            fprintf(outputPackets, "%x ", calculatedBcc);
             printf("Frame Accepted\n");
             stats.approvedCount++;
             cleanMachineData();

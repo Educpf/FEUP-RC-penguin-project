@@ -15,7 +15,6 @@ static int nRetransmissions;
 static LinkLayerRole role;
 
 Statistics stats;
-FILE *file;
 
 int llopen(LinkLayer connectionParameters)
 {
@@ -34,12 +33,6 @@ int llopen(LinkLayer connectionParameters)
     statsConstructor(&stats);
 
 
-    // Open file to store data to better understand errors
-    file = fopen("ReaderLog.txt", "w");
-    if (file == NULL)
-    {
-        perror("Error opening file");
-    }
 
     int STOP = FALSE;
     while (STOP == FALSE)
@@ -296,9 +289,6 @@ int llread(unsigned char *packet)
             }
             else if (nbytes)
             {
-                // Writes to file in order to better understand errors
-                fprintf(file, "New byte:  %x\n", byte);
-                fprintf(file, "The current state -> %d", getMachineState());
 
                 handleByte(byte);
             }
@@ -501,8 +491,6 @@ int llclose(int showStatistics)
         }
     }
 
-    // Close file
-    fclose(file);
     // Close Serial Port
     int clstat = closeSerialPort();
     if (clstat == -1)

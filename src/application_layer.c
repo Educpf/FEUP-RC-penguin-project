@@ -51,12 +51,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         if (outputFile == NULL)
         {
             perror("Error opening output file");
+            return;
         }
 
         outputPackets = fopen("PacketsReceiver.txt", "w");
         if (outputPackets == NULL)
         {
             perror("Error opening PacketsReceiver file");
+            return;
         }
 
         // Read and handle packets
@@ -192,12 +194,14 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         if (inputFile == NULL)
         {
             perror("Error opening input file");
+            return;
         }
 
         packetT = fopen("PacketsTransmitter.txt", "w");
         if (packetT == NULL)
         {
             perror("Error opening PacketsTransmitter file");
+            return;
         }
 
         // Get File Size

@@ -107,14 +107,16 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
                 }
                 case 2:
                 {
-                    // Unpack values and write to file
+                    // Unpack values
                     unsigned char sequenceNumber = packet[1];
                     unsigned char l2 = packet[2];
                     unsigned char l1 = packet[3];
 
+                    // Calculate actual data size
                     int k = 256 * (int)l2 + (int)l1;
                     int bytesWritten = 0;
 
+                    // Write to file
                     if ((bytesWritten = (int)fwrite(packet + 4, 1,(size_t)k, outputFile)) < k)
                     {
                         printf("Error writing to file in Sequence Number: %u\n", sequenceNumber);
